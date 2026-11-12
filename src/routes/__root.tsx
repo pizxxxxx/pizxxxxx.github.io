@@ -1,8 +1,11 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
-// Jost self-hosted (OFL): no external font CDN — works offline, on Pages and
+// Self-hosted (OFL): no external font CDN — works offline, on Pages and
 // on networks where Google Fonts is unreachable.
+// Unbounded — дисплейный, Manrope — текст, Jost italic — выкрики-адлибы.
+import "@fontsource-variable/unbounded";
+import "@fontsource-variable/manrope";
 import "@fontsource-variable/jost";
 import "@fontsource-variable/jost/wght-italic.css";
 import "@fontsource-variable/jetbrains-mono";
@@ -21,7 +24,7 @@ export const Route = createRootRoute({
         content:
           "LomifyNEXT — эстетичный плеер для Яндекс Музыки, SoundCloud и своей медиатеки. Синхронный текст по буквам.",
       },
-      { name: "theme-color", content: "#0c0b0d" },
+      { name: "theme-color", content: "#07060b" },
     ],
     links: [
       { rel: "icon", type: "image/png", href: "/favicon.png" },

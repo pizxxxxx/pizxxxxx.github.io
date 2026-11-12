@@ -7,22 +7,20 @@ type Ridge = {
   yBase: number; // базовая линия, доля высоты
   thick: number; // толщина штриха, px
   alpha: number; // прозрачность
-  tint: "hot" | "violet"; // из токенов темы
+  tint: "hot" | "glow"; // из токенов темы
 };
 
-// Оранжевые хребты спереди, фиолетовые уходят в тыл — глубина без 3D.
+// Тихие тёплые хребты у низа hero — текстура, а не неоновая заставка.
 const RIDGES: Ridge[] = [
-  { amp: 0.07, len: 1.5, speed: 0.09, yBase: 0.44, thick: 3, alpha: 1, tint: "hot" },
-  { amp: 0.1, len: 1.1, speed: -0.065, yBase: 0.49, thick: 2.5, alpha: 0.75, tint: "hot" },
-  { amp: 0.12, len: 0.85, speed: 0.048, yBase: 0.55, thick: 2, alpha: 0.5, tint: "hot" },
-  { amp: 0.15, len: 0.62, speed: -0.036, yBase: 0.61, thick: 1.6, alpha: 0.5, tint: "violet" },
-  { amp: 0.18, len: 0.45, speed: 0.026, yBase: 0.67, thick: 1.4, alpha: 0.32, tint: "violet" },
-  { amp: 0.21, len: 0.32, speed: -0.02, yBase: 0.73, thick: 1.2, alpha: 0.2, tint: "violet" },
+  { amp: 0.05, len: 1.6, speed: 0.06, yBase: 0.6, thick: 2.2, alpha: 0.85, tint: "hot" },
+  { amp: 0.075, len: 1.15, speed: -0.045, yBase: 0.66, thick: 1.8, alpha: 0.5, tint: "hot" },
+  { amp: 0.1, len: 0.8, speed: 0.03, yBase: 0.73, thick: 1.4, alpha: 0.32, tint: "glow" },
+  { amp: 0.13, len: 0.5, speed: -0.02, yBase: 0.8, thick: 1.1, alpha: 0.18, tint: "glow" },
 ];
 
 /**
  * Живая волна в hero. 2D canvas со слоями синус-хребтов; цвета читаются из
- * токенов темы (--color-hot / --color-violet), поэтому волна переодевается
+ * токенов темы (--color-hot / --color-glow), поэтому волна переодевается
  * вместе со скином. Пауза вне вьюпорта и на скрытой вкладке; статичный кадр
  * при prefers-reduced-motion.
  */
@@ -41,18 +39,18 @@ export function WaveCanvas() {
     let height = 0;
     let frame = 0;
     let inView = true;
-    let palette = { hot: "#ff4a17", violet: "#8b5cf6" };
+    let palette = { hot: "#ff4a17", glow: "#7a3413" };
 
     const readPalette = () => {
       const styles = getComputedStyle(document.documentElement);
       palette = {
         hot: styles.getPropertyValue("--color-hot").trim() || "#ff4a17",
-        violet: styles.getPropertyValue("--color-violet").trim() || "#8b5cf6",
+        glow: styles.getPropertyValue("--color-glow").trim() || "#7a3413",
       };
     };
 
     const ridgeColor = (ridge: Ridge) => {
-      const base = ridge.tint === "hot" ? palette.hot : palette.violet;
+      const base = ridge.tint === "hot" ? palette.hot : palette.glow;
       // hex → rgba с альфой хребта; exotic-форматы токенов не ждём.
       if (base.startsWith("#") && (base.length === 7 || base.length === 4)) {
         const raw = base.slice(1);

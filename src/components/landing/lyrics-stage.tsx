@@ -6,8 +6,6 @@ import {
   Heart,
   ListMusic,
   Maximize2,
-  Pause,
-  Play,
   Repeat,
   Shuffle,
   SkipBack,
@@ -17,6 +15,28 @@ import {
   Volume2,
 } from "lucide-react";
 import { buildModel, cursorAt, formatClock, tracks, type LyricCursor } from "./data";
+
+/* Глифы транспорта: залитые, с оптической центровкой (у треугольника центр
+   масс левее рамки — сдвигаю его вправо на пару процентов). */
+function PlayGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M8.4 5.6v12.8c0 .8.87 1.3 1.54.9l10.6-6.4a1.05 1.05 0 0 0 0-1.8l-10.6-6.4c-.67-.4-1.54.1-1.54.9Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function PauseGlyph() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="6.8" y="5" width="4.2" height="14" rx="1.8" fill="currentColor" />
+      <rect x="13" y="5" width="4.2" height="14" rx="1.8" fill="currentColor" />
+    </svg>
+  );
+}
 
 function fillSlider(el: HTMLInputElement, ratio: number) {
   const pct = `${Math.round(Math.min(1, Math.max(0, ratio)) * 1000) / 10}%`;
@@ -73,8 +93,16 @@ tracks.forEach((track, trackIndex) => {
   });
 });
 
-function progressFrom(stage: HTMLElement) {
-  const total = stage.offsetHeight - window.innerHeight;
+type LyricApi = {
+  scrollToProgress: (progress: number) => void;
+  tick: (now: number) => void;
+  stop: () => void;
+  resetClock: () => void;
+  progress: () => number;
+};
+
+function progressFrom(stage: HTMLElement, sticky: HTMLElement) {
+  const total = stage.offsetHeight - sticky.offsetHeight;
   if (total <= 0) return 0;
   const scrolled = Math.min(total, Math.max(0, -stage.getBoundingClientRect().top));
   return scrolled / total;
@@ -82,6 +110,8 @@ function progressFrom(stage: HTMLElement) {
 
 export function LyricsStage() {
   const stageRef = useRef<HTMLElement>(null);
+  const stickyRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
   const hairRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLParagraphElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -103,8 +133,9 @@ export function LyricsStage() {
 
   useEffect(() => {
     const stage = stageRef.current;
+    const sticky = stickyRef.current;
     const viewport = viewportRef.current;
-    if (!stage || !viewport) return;
+    if (!stage || !sticky || !viewport) return;
 
     reducedRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let lastKey = "";
@@ -196,11 +227,32 @@ export function LyricsStage() {
 
     paintRef.current = paint;
 
+    // Сцена ведётся прокруткой, как раньше: листаешь страницу — текст едет
+    // за скроллом. Play просто прокручивает сцену сам; ручной скролл его
+    // перебивает. Окно закреплено ПОД навигацией и у конца диапазона мягко
+    // гаснет — без «слипания» транспорта с пилюлей и рывков у краёв.
+    let last = 0;
+
+    const updateFrame = () => {
+      const win = windowRef.current;
+      if (!win) return;
+      const vh = window.innerHeight;
+      const sectionRect = stage.getBoundingClientRect();
+      const stickyRect = sticky.getBoundingClientRect();
+      const enter = Math.min(1, Math.max(0, (vh - stickyRect.top) / (vh * 0.5)));
+      const remaining = sectionRect.bottom - stickyRect.bottom;
+      const exit = Math.min(1, Math.max(0, remaining / (vh * 0.6)));
+      const k = Math.min(enter, exit);
+      win.style.opacity = k.toFixed(3);
+      if (!reducedRef.current) win.style.transform = `scale(${(0.94 + 0.06 * k).toFixed(4)})`;
+    };
+
     const scrollToProgress = (progress: number) => {
-      const total = stage.offsetHeight - window.innerHeight;
+      const total = stage.offsetHeight - sticky.offsetHeight;
       driveAt.current = performance.now();
       window.scrollTo(0, stage.offsetTop + progress * Math.max(0, total));
       paint(progress);
+      updateFrame();
     };
 
     const stop = () => {
@@ -209,7 +261,6 @@ export function LyricsStage() {
       if (frame) cancelAnimationFrame(frame);
     };
 
-    let last = 0;
     const tick = (now: number) => {
       if (!playingRef.current) return;
       const dt = last === 0 ? 0 : (now - last) / 1000;
@@ -225,7 +276,8 @@ export function LyricsStage() {
 
     const onScroll = () => {
       if (playingRef.current && performance.now() - driveAt.current > 180) stop();
-      paint(progressFrom(stage));
+      paint(progressFrom(stage, sticky));
+      updateFrame();
     };
 
     const onRange = () => {
@@ -233,15 +285,22 @@ export function LyricsStage() {
       scrollToProgress(value);
     };
 
-    paint(progressFrom(stage));
+    paint(progressFrom(stage, sticky));
+    updateFrame();
     document.fonts?.ready.then(() => paint(progressRef.current)).catch(() => undefined);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     rangeRef.current?.addEventListener("input", onRange);
 
-    const api = { scrollToProgress, tick, stop, resetClock: () => { last = 0; } };
+    const api: LyricApi = {
+      scrollToProgress,
+      tick,
+      stop,
+      resetClock: () => { last = 0; },
+      progress: () => progressRef.current,
+    };
     stage.dataset.ready = "1";
-    (stage as HTMLElement & { __lyric?: typeof api }).__lyric = api;
+    (stage as HTMLElement & { __lyric?: LyricApi }).__lyric = api;
 
     return () => {
       window.removeEventListener("scroll", onScroll);
@@ -257,10 +316,7 @@ export function LyricsStage() {
   });
 
   const togglePlay = () => {
-    const stage = stageRef.current as (HTMLElement & {
-      __lyric?: { scrollToProgress: (p: number) => void; tick: (n: number) => void; stop: () => void; resetClock: () => void };
-    }) | null;
-    const api = stage?.__lyric;
+    const api = (stageRef.current as (HTMLElement & { __lyric?: LyricApi }) | null)?.__lyric;
     if (!api) return;
     if (playingRef.current) {
       api.stop();
@@ -278,15 +334,26 @@ export function LyricsStage() {
       ref={stageRef}
       className={lyricsOn ? "lyric-stage stage" : "lyric-stage stage is-lyrics-hidden"}
     >
-      <div className="stage-sticky">
-        <img className="stage-wash" src="/covers/dejure.jpg" alt="" />
-        <div ref={hairRef} className="stage-hair" />
-        <div className="stage-inner">
+      <div className="stage-sticky" ref={stickyRef}>
+        <div className="stage-window" ref={windowRef}>
+          <div className="stage-blob stage-blob--a" />
+          <div className="stage-blob stage-blob--b" />
+          <div className="stage-blob stage-blob--c" />
+          <img className="stage-wash" src="/covers/dejure.jpg" alt="" />
+          <div className="stage-haze" />
+          <div ref={hairRef} className="stage-hair" />
+          <div className="stage-inner">
           <p ref={hintRef} className="stage-hint">
-            Мотай вниз — de jure и CUPSIZE. Полные тексты — на Genius, ссылки у каждой карточки
+            Мотай вниз — текст едет за прокруткой. de jure и CUPSIZE, полные тексты на Genius
           </p>
           <div className="stage-grid">
-            <div className="cover-wrap">
+            <button
+              type="button"
+              className="cover-wrap"
+              aria-pressed={lyricsOn}
+              aria-label={lyricsOn ? "Скрыть текст" : "Показать текст"}
+              onClick={() => setLyricsOn((value) => !value)}
+            >
               <img data-cover="dejure" className="cover-img is-on" src="/covers/dejure.jpg" alt="Обложка сингла de jure — королевский XVII" />
               <img data-cover="cupsize" className="cover-img" src="/covers/cupsize.png" alt="Обложка сингла ты любишь танцевать — CUPSIZE" />
               {tracks.map((track) => {
@@ -300,7 +367,7 @@ export function LyricsStage() {
                         data-shout="1"
                         data-at={cue.at.toFixed(4)}
                         data-hold={cue.hold.toFixed(4)}
-                        className={cue.outline ? "shout is-outline" : "shout"}
+                        className="shout"
                         style={{
                           left: `${cue.x}%`,
                           top: `${cue.y}%`,
@@ -314,11 +381,11 @@ export function LyricsStage() {
                   </div>
                 );
               })}
-              <button type="button" className="hide-lyrics" onClick={() => setLyricsOn((value) => !value)}>
+              <span className="hide-lyrics" aria-hidden="true">
                 <ListMusic size={18} />
                 {lyricsOn ? "Скрыть текст" : "Показать текст"}
-              </button>
-            </div>
+              </span>
+            </button>
             <div className="lyrics-wrap">
               <div ref={viewportRef} className="lyrics-viewport">
                 {tracks.map((track, trackIndex) => (
@@ -378,8 +445,8 @@ export function LyricsStage() {
                 <button type="button" className="icon-btn" aria-label="Предыдущая строфа" onClick={() => jump(stageRef.current, -1)}>
                   <SkipBack size={16} />
                 </button>
-                <button type="button" className="icon-btn" aria-label={playing ? "Пауза" : "Играть текст"} aria-pressed={playing} onClick={togglePlay}>
-                  {playing ? <Pause size={16} /> : <Play size={16} />}
+                <button type="button" className="icon-btn play-btn" aria-label={playing ? "Пауза" : "Играть текст"} aria-pressed={playing} onClick={togglePlay}>
+                  {playing ? <PauseGlyph /> : <PlayGlyph />}
                 </button>
                 <button type="button" className="icon-btn" aria-label="Следующая строфа" onClick={() => jump(stageRef.current, 1)}>
                   <SkipForward size={16} />
@@ -429,6 +496,7 @@ export function LyricsStage() {
             </div>
           </div>
           <p ref={liveRef} className="sr-only" aria-live="polite" />
+          </div>
         </div>
       </div>
     </section>
@@ -437,10 +505,10 @@ export function LyricsStage() {
 
 function jump(stage: HTMLElement | null, direction: number) {
   if (!stage) return;
-  const api = (stage as HTMLElement & { __lyric?: { scrollToProgress: (p: number) => void; stop: () => void } }).__lyric;
+  const api = (stage as HTMLElement & { __lyric?: LyricApi }).__lyric;
   if (!api) return;
   api.stop();
-  const current = cursorAt(model, tracks, progressFrom(stage));
+  const current = cursorAt(model, tracks, api.progress());
   let track = current.track;
   let line = current.line + direction;
   if (line < 0) {
