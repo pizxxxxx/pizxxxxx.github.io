@@ -31,6 +31,26 @@ const GENIUS_DEJURE = "https://genius.com/Xvii-de-jure-lyrics";
 
 const sideIcons = [Library, Search, Waves, AudioLines, Heart];
 
+/* Штрихкод чека: статичные «случайные» полосы — без рантайма и без SSR-дрейфа. */
+const RECEIPT_BARS = [3, 1, 2, 1, 1, 3, 2, 1, 3, 1, 2, 2, 1, 1, 3, 1, 2, 1, 1, 2, 3, 1, 1, 2, 1, 3, 1, 2, 1, 1, 2, 1];
+
+function ReceiptBarcode() {
+  let x = 0;
+  return (
+    <svg className="r-code" viewBox="0 0 143 32" preserveAspectRatio="none" aria-hidden="true">
+      {RECEIPT_BARS.map((w, i) => {
+        const rect = <rect key={i} x={x} y={0} width={w * 1.4} height={32} />;
+        x += w * 1.4 + 2.2;
+        return rect;
+      })}
+    </svg>
+  );
+}
+
+/* Рваный нижний край чека: зубцы идут справа налево от правого края листа. */
+const RECEIPT_TEAR =
+  "M0 0H320V6L310 11L300 4L290 10L280 3L270 9L260 5L250 11L240 4L230 9L220 3L210 10L200 5L190 11L180 4L170 9L160 3L150 10L140 5L130 11L120 4L110 9L100 3L90 10L80 5L70 11L60 4L50 9L40 3L30 10L20 5L10 11L0 6Z";
+
 export function Landing() {
   const [open, setOpen] = useState(false);
   const [skin, setSkin] = useState<SkinId>("mister");
@@ -39,6 +59,36 @@ export function Landing() {
     document.documentElement.dataset.skin = skin;
     document.documentElement.dataset.glass = "high";
   }, [skin]);
+
+  // Навигация-пилюля: стекло после прокрутки, бумага над светлыми секциями
+  // (оформление и цена).
+  useEffect(() => {
+    const nav = document.querySelector(".site-nav");
+    const papers = Array.from(document.querySelectorAll("#themes, #download"));
+    if (!nav) return;
+    const onScroll = () => nav.classList.toggle("is-solid", window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    let io: IntersectionObserver | null = null;
+    if (papers.length > 0) {
+      const visible = new Set<string>();
+      io = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) visible.add(entry.target.id);
+            else visible.delete(entry.target.id);
+          }
+          nav.classList.toggle("is-paper", visible.size > 0);
+        },
+        { rootMargin: "-72px 0px -82% 0px", threshold: 0 },
+      );
+      for (const section of papers) io.observe(section);
+    }
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      io?.disconnect();
+    };
+  }, []);
 
   return (
     <div>
@@ -83,6 +133,12 @@ export function Landing() {
       <main id="top">
         <section className="hero">
           <WaveCanvas />
+          <p className="hero-corner hero-corner--tl mono">
+            сайт и так тёмный — с dark reader он хуже: выключи его
+          </p>
+          <p className="hero-corner hero-corner--tr mono">
+            open source · gpl-3.0 · v9.6.4
+          </p>
           <div className="hero-ruler mono" aria-hidden="true">
             <span>31</span>
             <span>125</span>
@@ -103,7 +159,7 @@ export function Landing() {
               </h1>
               <p className="lede">
                 Тихий плеер для Windows: Яндекс Музыка, SoundCloud и твоя медиатека в одном окне.
-                Текст идёт по буквам, как в полноэкранном режиме. Прокрути вниз — увидишь.
+                Текст идёт по буквам, как в полноэкранном режиме. Листай вниз — увидишь.
               </p>
               <div className="hero-actions">
                 <a className="btn btn-primary" href={WIN_DL}>
@@ -177,7 +233,7 @@ export function Landing() {
           <section className="section sec-band">
             <div className="section-inner">
               <div className="sec-head">
-                <p className="sec-kicker">— 01 / текст</p>
+                <p className="sec-kicker">01 / текст</p>
                 <h2 className="sec-title">
                   Подпевай <span className="alt">по буквам.</span>
                 </h2>
@@ -196,10 +252,10 @@ export function Landing() {
           <LyricsStage />
         </div>
 
-        <section className="section" id="themes">
+        <section className="section sec--paper" id="themes">
           <div className="section-inner">
             <div className="sec-head">
-              <p className="sec-kicker">— 02 / оформление</p>
+              <p className="sec-kicker">02 / оформление</p>
               <h2 className="sec-title">
                 Свой вид <span className="alt">под настроение.</span>
               </h2>
@@ -218,9 +274,16 @@ export function Landing() {
                   onClick={() => setSkin(theme.id)}
                 >
                   <div className={`theme-preview ${theme.preview}`}>
-                    <div className="bar" style={{ width: "70%" }} />
-                    <div className="bar short" />
-                    <div className="chip" />
+                    <div className="tp-head"><i /><i /><i /></div>
+                    <div className="tp-row">
+                      <span className="tp-cover" />
+                      <span className="tp-lines">
+                        <i className="tp-l1" />
+                        <i className="tp-l2" />
+                      </span>
+                      <span className="tp-play" />
+                    </div>
+                    <div className="tp-progress"><i /></div>
                   </div>
                   <h3>{theme.name}</h3>
                   <p>{theme.text}</p>
@@ -233,7 +296,7 @@ export function Landing() {
         <section className="section" id="features">
           <div className="section-inner">
             <div className="sec-head">
-              <p className="sec-kicker">— 03 / возможности</p>
+              <p className="sec-kicker">03 / возможности</p>
               <h2 className="sec-title">
                 Два сервиса <span className="alt">и свои файлы.</span>
               </h2>
@@ -285,38 +348,66 @@ export function Landing() {
           </div>
         </section>
 
-        <section className="section" id="download">
+        <section className="section sec--paper sec--price" id="download">
           <div className="section-inner">
-            <div className="sec-head">
-              <p className="sec-kicker">— 04 / установка</p>
-              <h2 className="sec-title">
-                Поставь <span className="alt">и слушай.</span>
-              </h2>
-              <p className="section-lead">
-                Кнопка качает последнюю сборку прямо с GitHub Releases — установщик LomifyNEXT для
-                Windows x64, без лишних кликов. Права администратора нужны не всегда. Версия для
-                Android живёт отдельно.
-              </p>
-            </div>
-            <div className="download-panel glass">
-              <div className="dl-actions">
-                <a className="btn btn-primary" href={WIN_DL}>
-                  <Download size={16} />
-                  Скачать для Windows
-                </a>
-                <a className="btn btn-ghost" href={APK_DL}>
-                  <Smartphone size={16} />
-                  Android
-                </a>
-                <a className="btn btn-ghost" href={SOURCE} rel="noreferrer">
-                  <Github size={16} />
-                  Исходники
-                </a>
+            <div className="price-grid">
+              <div className="price-copy">
+                <p className="sec-kicker">04 / цена</p>
+                <h2 className="sec-title">
+                  Бесплатно. <span className="alt">Без подвоха.</span>
+                </h2>
+                <p className="price-zero" aria-label="Ноль рублей">
+                  <span>0</span>
+                  <i>₽</i>
+                </p>
+                <p className="section-lead">
+                  Весь плеер целиком: тексты песен, темы, эквалайзер, волна и очередь. Платных планов
+                  нет — качай последнюю сборку и слушай.
+                </p>
+                <div className="price-links">
+                  <a className="sec-link" href={APK_DL}>
+                    <Smartphone size={14} />
+                    Android · APK
+                  </a>
+                  <a className="sec-link" href={SOURCE} target="_blank" rel="noreferrer">
+                    <Github size={14} />
+                    Исходники · GPL-3.0
+                  </a>
+                </div>
+                <p className="price-fine">
+                  Кнопка на чеке качает последний релиз с GitHub Releases. Яндекс Музыка и SoundCloud —
+                  знаки своих владельцев, Lomify их не заменяет.
+                </p>
               </div>
-              <p className="fine">
-                После установки: Настройки → Сервисы, подключи музыку и открой Поиск. Яндекс Музыка и
-                SoundCloud — знаки своих владельцев. Lomify их не заменяет.
-              </p>
+              <div className="price-receipt">
+                <div className="receipt">
+                  <div className="receipt-rod" aria-hidden="true" />
+                  <div className="receipt-sheet">
+                    <p className="r-brand">LOMIFY·STORE</p>
+                    <p className="r-meta">касса №1 · чек №0001 · без сдачи</p>
+                    <ul className="r-lines">
+                      <li><span>Плеер</span><i /><b>0 ₽</b></li>
+                      <li><span>Тексты песен</span><i /><b>0 ₽</b></li>
+                      <li><span>Темы</span><i /><b>0 ₽</b></li>
+                      <li><span>Эквалайзер</span><i /><b>0 ₽</b></li>
+                      <li><span>Волна и очередь</span><i /><b>0 ₽</b></li>
+                      <li><span>Реклама</span><i /><b className="r-no">нет</b></li>
+                      <li><span>Подписка</span><i /><b className="r-no">не заводилась</b></li>
+                    </ul>
+                    <p className="r-total"><span>ИТОГО</span><i /><b>0 ₽</b></p>
+                    <ReceiptBarcode />
+                    <p className="r-num">4020 0000 0000 000 · СКИДКА 100%</p>
+                    <p className="r-thanks">СПАСИБО, ЧТО СЛУШАЕШЬ</p>
+                    <a className="btn btn-primary r-btn" href={WIN_DL}>
+                      <Download size={16} />
+                      БЕСПЛАТНО
+                    </a>
+                  </div>
+                  <svg className="r-tear" viewBox="0 0 320 12" preserveAspectRatio="none" aria-hidden="true">
+                    <path d={RECEIPT_TEAR} fill="currentColor" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </section>
