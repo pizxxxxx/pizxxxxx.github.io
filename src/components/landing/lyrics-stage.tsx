@@ -113,7 +113,6 @@ export function LyricsStage() {
   const stickyRef = useRef<HTMLDivElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const hairRef = useRef<HTMLDivElement>(null);
-  const hintRef = useRef<HTMLParagraphElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const elapsedRef = useRef<HTMLSpanElement>(null);
   const remainRef = useRef<HTMLSpanElement>(null);
@@ -149,7 +148,6 @@ export function LyricsStage() {
       progressRef.current = cursor.global;
 
       if (hairRef.current) hairRef.current.style.transform = `scaleX(${cursor.global})`;
-      if (hintRef.current) hintRef.current.style.opacity = String(Math.max(0, 1 - cursor.global * 5));
       if (rangeRef.current) {
         const dragging = document.activeElement === rangeRef.current;
         if (!dragging) rangeRef.current.value = String(Math.round(cursor.global * 1000));
@@ -343,9 +341,6 @@ export function LyricsStage() {
           <div className="stage-haze" />
           <div ref={hairRef} className="stage-hair" />
           <div className="stage-inner">
-          <p ref={hintRef} className="stage-hint">
-            Мотай вниз — текст едет за прокруткой. de jure и CUPSIZE, полные тексты на Genius
-          </p>
           <div className="stage-grid">
             <button
               type="button"

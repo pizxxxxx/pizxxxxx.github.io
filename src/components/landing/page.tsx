@@ -60,6 +60,35 @@ export function Landing() {
     document.documentElement.dataset.glass = "high";
   }, [skin]);
 
+  // Чек выезжает из бумаги по мере прокрутки: чем глубже зашли в секцию цены,
+  // тем выше поднимается лист. 0 — лежит внутри секции, 1 — висит над срезом.
+  useEffect(() => {
+    const receipt = document.querySelector<HTMLElement>(".receipt");
+    const section = document.getElementById("download");
+    if (!receipt || !section) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let frame = 0;
+    const paint = () => {
+      frame = 0;
+      const vh = window.innerHeight;
+      const top = section.getBoundingClientRect().top;
+      // Линейная привязка к скроллу: лист лезет ровно по мере прокрутки.
+      const p = Math.min(1, Math.max(0, (vh - top) / (vh * 0.55)));
+      receipt.style.setProperty("--rise", p.toFixed(4));
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(paint);
+    };
+    paint();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   // Навигация-пилюля: стекло после прокрутки, бумага над светлыми секциями
   // (оформление и цена).
   useEffect(() => {
@@ -250,6 +279,19 @@ export function Landing() {
             </div>
           </section>
           <LyricsStage />
+          <section className="section text-merits">
+            <div className="section-inner">
+              <p className="text-merits-kicker mono">что уже умеет плеер</p>
+              <ul className="text-merits-list mono">
+                <li>текст по буквам — полный экран и таймкоды</li>
+                <li>эквалайзер с профилями и своими пресетами</li>
+                <li>моя волна, очередь и поиск с опечатками</li>
+                <li>темы: цвета подбираются по обложке</li>
+                <li>клавиши медиа, Last.fm, старт с системой</li>
+                <li>без рекламы, трекеров и подписок</li>
+              </ul>
+            </div>
+          </section>
         </div>
 
         <section className="section sec--paper" id="themes">
@@ -408,6 +450,21 @@ export function Landing() {
                   </svg>
                 </div>
               </div>
+            </div>
+            <div className="dl-finale">
+              <div className="dl-finale-actions">
+                <a className="btn btn-primary" href={WIN_DL}>
+                  <Download size={16} />
+                  Скачать для Windows
+                </a>
+                <a className="btn btn-ghost" href={APK_DL}>
+                  <Smartphone size={16} />
+                  Android · APK
+                </a>
+              </div>
+              <p className="dl-finale-meta mono">
+                LomifyNEXT v9.6.4 · APK 1.0.37 · GPL-3.0 · обновления — через GitHub Releases
+              </p>
             </div>
           </div>
         </section>

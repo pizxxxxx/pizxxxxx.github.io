@@ -46,8 +46,8 @@
 }
 
 :root[data-skin="classic"] {
-  --color-bg: #101114;
-  --color-bg-raised: #181b22;
+  --color-bg: #141210;
+  --color-bg-raised: #1d1a17;
   --color-surface: #20242c;
   --color-surface-2: #2a303a;
   --color-accent: #ddd6ce;
@@ -60,8 +60,8 @@
 }
 
 :root[data-skin="aurora"] {
-  --color-bg: #07080d;
-  --color-bg-raised: #10131c;
+  --color-bg: #0a0e1b;
+  --color-bg-raised: #141b2e;
   --color-surface: #151a27;
   --color-surface-2: #1d2436;
   --color-accent: #c5d2ff;
@@ -76,7 +76,7 @@
 
 :root[data-skin="matte"] {
   --color-bg: #121214;
-  --color-bg-raised: #19191c;
+  --color-bg-raised: #1a1a1e;
   --color-surface: #222226;
   --color-surface-2: #2a2a2f;
   --color-accent: #d4cfd6;
@@ -122,6 +122,8 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     overflow-x: clip;
+    /* Смена темы перекрашивает фон плавно, без щелчка. */
+    transition: background-color 500ms var(--ease-out);
   }
 
   /* Матовая зернистость на весь сайт — как в приложении и на референсе:
@@ -714,12 +716,13 @@
   padding: 0 12px 12px;
 }
 
-/* Окно сцены — как .lyr__stage на референсе: скруглённый контейнер
-   с волосяной кромкой и глубокой тенью. */
+/* Окно сцены — как .lyr__stage на референсе: скруглённый контейнер с мягкой
+   кромкой: по углам и краям цвет окна перетекает в тёмный фон страницы —
+   без жёсткого светлого обода. */
 .stage-window {
   position: relative;
   overflow: hidden;
-  border-radius: 28px;
+  border-radius: 32px;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -727,10 +730,12 @@
   transform-origin: 50% 50%;
   will-change: opacity, transform;
   background: color-mix(in oklab, var(--color-bg) 88%, black);
+  transition: background-color 500ms var(--ease-out);
   box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 70px 160px -50px rgba(0, 0, 0, 0.9);
+    inset 0 0 84px 12px color-mix(in oklab, var(--color-bg) 60%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--color-fg) 5%, transparent),
+    0 34px 130px -38px rgba(0, 0, 0, 0.9),
+    0 0 90px 36px color-mix(in oklab, var(--color-bg) 95%, transparent);
 }
 
 .stage-blob {
@@ -793,13 +798,6 @@
   margin: 0 auto;
   flex: 1;
   min-height: 0;
-}
-
-.stage-hint {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
 }
 
 .stage-grid {
@@ -1052,6 +1050,11 @@
   .lyrics-wrap {
     width: 50%;
     flex: 1 1 50%;
+  }
+
+  /* Текстовый столбец чуть правее центра — воздух между обложкой и строками. */
+  .track-block {
+    padding-left: 2.9rem;
   }
 
   .stage.is-lyrics-hidden .cover-wrap {
@@ -1595,6 +1598,56 @@
   background: var(--color-bg-raised);
 }
 
+/* Заслуги плеера: тонкая mono-полоса после караоке-сцены — краткая инфа
+   о том, что внутри, до перехода к темам. */
+.text-merits {
+  padding-top: 0.4rem;
+}
+
+.text-merits-kicker {
+  margin: 0 0 1.1rem;
+  color: var(--color-dim);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.text-merits-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem 2.4rem;
+  color: var(--color-muted);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+.text-merits-list li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+}
+
+.text-merits-list li::before {
+  content: "";
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-hot);
+  transform: translateY(-2px);
+}
+
+@media (min-width: 720px) {
+  .text-merits-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 /* ── Цена: бумажный блок с кассовым чеком ─────────────────────────────
    Слева — копия и гигантский «0 ₽», справа чек, который вылезает над верхом
    бумажной секции (отрицательный отгон наверх) и висит на тёмном рулоне. */
@@ -1645,9 +1698,23 @@
     column-gap: clamp(3rem, 6vw, 6.5rem);
   }
 
-  /* Чек поднимается над секцией: рулон и верх листа висят в тёмной зоне. */
+  /* Чек поднимается над секцией: рулон и верх листа висят в тёмной зоне.
+     Подъём ведётся скроллом (--rise от JS): пока секция входит в экран,
+     лист лежит ниже и слегка наклонён, к моменту чтения — на месте. */
   .price-receipt {
     margin-top: calc(-1 * var(--sec-pad) - 56px);
+  }
+
+  .receipt {
+    transform: translateY(calc((1 - var(--rise, 1)) * 148px))
+      rotate(calc((1 - var(--rise, 1)) * -1.4deg));
+    transform-origin: 50% 0%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .receipt {
+      transform: none;
+    }
   }
 }
 
@@ -1805,6 +1872,32 @@
   height: 12px;
   margin-top: -1px;
   color: var(--paper-raised);
+}
+
+/* Финальная строка секции цены: кнопки платформ и mono-сводка версий. */
+.dl-finale {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem 2rem;
+  margin-top: clamp(2.6rem, 5vw, 4.4rem);
+  padding-top: 1.7rem;
+  border-top: 1px solid var(--paper-line);
+}
+
+.dl-finale-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.dl-finale-meta {
+  margin: 0;
+  color: var(--paper-muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .site-footer {
