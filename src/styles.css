@@ -843,7 +843,7 @@
   font-weight: 800;
   letter-spacing: 0.02em;
   color: #fff;
-  text-shadow: 0 3px 22px rgba(0, 0, 0, 0.65), 0 1px 4px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 3px 24px rgba(0, 0, 0, 0.7), 0 1px 5px rgba(0, 0, 0, 0.6);
   opacity: 0;
   scale: 0.4;
   transition: opacity 240ms ease, scale 420ms var(--ease-spring);
@@ -852,12 +852,6 @@
 .shout.is-on {
   opacity: 1;
   scale: 1;
-}
-
-.shout.is-outline {
-  color: transparent;
-  -webkit-text-stroke: 2px rgba(255, 255, 255, 0.95);
-  text-shadow: 0 3px 24px rgba(0, 0, 0, 0.5);
 }
 
 @media (min-width: 720px) {

@@ -34,20 +34,20 @@ const PLAY_SECONDS = 52;
 type Shout = { text: string; x: number; y: number; rot: number; size: number; at: number; outline?: boolean };
 const SHOUTS: Record<string, Shout[]> = {
   dejure: [
-    { text: "Е", x: 70, y: 15, rot: -10, size: 2.8, at: 0.04, outline: true },
-    { text: "М-м", x: 8, y: 40, rot: 7, size: 1.9, at: 0.12 },
-    { text: "Да-да", x: 52, y: 53, rot: -5, size: 1.7, at: 0.24 },
-    { text: "Ага", x: 12, y: 69, rot: -9, size: 1.9, at: 0.36 },
-    { text: "У-у", x: 9, y: 10, rot: 6, size: 1.6, at: 0.48, outline: true },
-    { text: "Я-я", x: 62, y: 76, rot: 8, size: 1.7, at: 0.62 },
-    { text: "Е", x: 30, y: 26, rot: -7, size: 2.2, at: 0.78, outline: true },
+    { text: "Е", x: 70, y: 15, rot: -10, size: 3.6, at: 0.04 },
+    { text: "М-м", x: 8, y: 40, rot: 7, size: 2.4, at: 0.12 },
+    { text: "Да-да", x: 52, y: 53, rot: -5, size: 2.2, at: 0.24 },
+    { text: "Ага", x: 12, y: 69, rot: -9, size: 2.4, at: 0.36 },
+    { text: "У-у", x: 9, y: 10, rot: 6, size: 2.2, at: 0.48 },
+    { text: "Я-я", x: 62, y: 76, rot: 8, size: 2.2, at: 0.62 },
+    { text: "Е", x: 30, y: 26, rot: -7, size: 2.8, at: 0.78 },
   ],
   cupsize: [
-    { text: "муа", x: 58, y: 33, rot: -8, size: 2.6, at: 0.06, outline: true },
-    { text: "м-м", x: 10, y: 13, rot: 8, size: 1.7, at: 0.22 },
-    { text: "а-а", x: 78, y: 57, rot: 6, size: 1.6, at: 0.42 },
-    { text: "да", x: 40, y: 75, rot: -6, size: 1.5, at: 0.58 },
-    { text: "муа", x: 24, y: 18, rot: 7, size: 2.1, at: 0.8, outline: true },
+    { text: "муа", x: 58, y: 33, rot: -8, size: 3.4, at: 0.06 },
+    { text: "м-м", x: 10, y: 13, rot: 8, size: 2.2, at: 0.22 },
+    { text: "а-а", x: 78, y: 57, rot: 6, size: 2.1, at: 0.42 },
+    { text: "да", x: 40, y: 75, rot: -6, size: 2, at: 0.58 },
+    { text: "муа", x: 24, y: 18, rot: 7, size: 2.7, at: 0.8 },
   ],
 };
 
