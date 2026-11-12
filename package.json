@@ -25,6 +25,8 @@
     "@electric-sql/pglite": "^0.5.4",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource-variable/jost": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@fontsource-variable/unbounded": "^5.3.0",
     "@hookform/resolvers": "^5.7.0",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
