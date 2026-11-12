@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
+  ArrowUpRight,
   AudioLines,
   Headphones,
   Heart,
@@ -24,6 +25,24 @@ function fillSlider(el: HTMLInputElement, ratio: number) {
 }
 const model = buildModel(tracks);
 const PLAY_SECONDS = 52;
+
+/** Декоративные адлибы-«выкрики» поверх обложки (междометия из трека, не строки текста). */
+type Shout = { text: string; x: number; y: number; rot: number; size: number; outline?: boolean };
+const SHOUTS: Record<string, Shout[]> = {
+  dejure: [
+    { text: "Е", x: 70, y: 15, rot: -10, size: 2.1, outline: true },
+    { text: "М-м", x: 8, y: 40, rot: 7, size: 1.35 },
+    { text: "Да-да", x: 52, y: 53, rot: -5, size: 1.15 },
+    { text: "Ага", x: 12, y: 69, rot: -9, size: 1.3 },
+    { text: "У-у", x: 9, y: 10, rot: 6, size: 1, outline: true },
+  ],
+  cupsize: [
+    { text: "муа", x: 58, y: 33, rot: -8, size: 1.9, outline: true },
+    { text: "м-м", x: 10, y: 13, rot: 8, size: 1.2 },
+    { text: "а-а", x: 78, y: 57, rot: 6, size: 1.15 },
+    { text: "да", x: 40, y: 75, rot: -6, size: 1.05 },
+  ],
+};
 
 function progressFrom(stage: HTMLElement) {
   const total = stage.offsetHeight - window.innerHeight;
@@ -85,6 +104,9 @@ export function LyricsStage() {
 
       stage.querySelectorAll<HTMLImageElement>("[data-cover]").forEach((img) => {
         img.classList.toggle("is-on", img.dataset.cover === track.id);
+      });
+      stage.querySelectorAll<HTMLElement>("[data-shouts]").forEach((layer) => {
+        layer.classList.toggle("is-on", layer.dataset.shouts === track.id);
       });
       const wash = stage.querySelector<HTMLImageElement>(".stage-wash");
       if (wash && !wash.src.endsWith(track.cover)) wash.src = track.cover;
@@ -218,16 +240,39 @@ export function LyricsStage() {
       className={lyricsOn ? "lyric-stage stage" : "lyric-stage stage is-lyrics-hidden"}
     >
       <div className="stage-sticky">
-        <img className="stage-wash" src="/covers/listen.jpg" alt="" />
+        <img className="stage-wash" src="/covers/dejure.jpg" alt="" />
         <div ref={hairRef} className="stage-hair" />
         <div className="stage-inner">
           <p ref={hintRef} className="stage-hint">
-            Мотай вниз — текст Маяковского, потом Блока. Оба в общественном достоянии
+            Мотай вниз — de jure и CUPSIZE. Полные тексты — на Genius, ссылки у каждой карточки
           </p>
           <div className="stage-grid">
             <div className="cover-wrap">
-              <img data-cover="listen" className="cover-img is-on" src="/covers/listen.jpg" alt="Лунная ночь в Петербурге, Алексей Боголюбов" />
-              <img data-cover="night" className="cover-img" src="/covers/night.jpg" alt="Лунная ночь, Архип Куинджи" />
+              <img data-cover="dejure" className="cover-img is-on" src="/covers/dejure.jpg" alt="Обложка сингла de jure — королевский XVII" />
+              <img data-cover="cupsize" className="cover-img" src="/covers/cupsize.png" alt="Обложка сингла ты любишь танцевать — CUPSIZE" />
+              {tracks.map((track) => {
+                const shouts = SHOUTS[track.id];
+                if (!shouts) return null;
+                return (
+                  <div key={track.id} data-shouts={track.id} className="shouts">
+                    {shouts.map((s, index) => (
+                      <span
+                        key={s.text}
+                        className={s.outline ? "shout is-outline" : "shout"}
+                        style={{
+                          left: `${s.x}%`,
+                          top: `${s.y}%`,
+                          fontSize: `${s.size}rem`,
+                          transform: `rotate(${s.rot}deg)`,
+                          transitionDelay: `${index * 70}ms`,
+                        }}
+                      >
+                        {s.text}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })}
               <button type="button" className="hide-lyrics" onClick={() => setLyricsOn((value) => !value)}>
                 <ListMusic size={18} />
                 {lyricsOn ? "Скрыть текст" : "Показать текст"}
@@ -254,6 +299,12 @@ export function LyricsStage() {
                         ))}
                       </p>
                     ))}
+                    {track.lyricsUrl ? (
+                      <a className="lyrics-link" href={track.lyricsUrl} target="_blank" rel="noreferrer">
+                        Полный текст песни — на Genius
+                        <ArrowUpRight size={14} />
+                      </a>
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -312,10 +363,10 @@ export function LyricsStage() {
                 </button>
               </div>
               <div className="transport-meta">
-                <img ref={thumbRef} src="/covers/listen.jpg" alt="" />
+                <img ref={thumbRef} src="/covers/dejure.jpg" alt="" />
                 <div>
-                  <b ref={titleRef}>Послушайте!</b>
-                  <small ref={artistRef}>Владимир Маяковский</small>
+                  <b ref={titleRef}>de jure</b>
+                  <small ref={artistRef}>королевский XVII</small>
                 </div>
                 <Sun size={14} className="transport-extra" />
                 <AudioLines size={14} className="transport-extra" />
