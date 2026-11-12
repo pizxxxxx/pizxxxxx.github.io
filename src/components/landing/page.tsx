@@ -20,8 +20,12 @@ import { libraryRows, sideLinks, themes, type SkinId } from "./data";
 import { LyricsStage } from "./lyrics-stage";
 import { WaveCanvas } from "./wave-canvas";
 
-const WIN = "https://github.com/pizxxxxx/LomifyNEXT/releases/latest";
-const ANDROID = "https://github.com/pizxxxxx/LomifyNEXT-Mobile/releases/latest";
+// Прямые ссылки на ассеты последнего релиза (GitHub отдаёт файл сразу).
+// Имя ассета содержит версию — при новом релизе обновить обе строки.
+const WIN_EXE =
+  "https://github.com/pizxxxxx/LomifyNEXT/releases/latest/download/LomifyNEXT_9.6.4_x64-setup.exe";
+const APK =
+  "https://github.com/pizxxxxx/LomifyNEXT-Mobile/releases/latest/download/LomifyNEXT-1.0.37-arm64.apk";
 const SOURCE = "https://github.com/pizxxxxx/LomifyNEXT";
 const GENIUS_DEJURE = "https://genius.com/Xvii-de-jure-lyrics";
 
@@ -52,7 +56,7 @@ export function Landing() {
           <a href="#download">Скачать</a>
         </nav>
         <div className="nav-actions">
-          <a className="btn btn-primary" href={WIN} rel="noreferrer">
+          <a className="btn btn-primary" href={WIN_EXE} rel="noreferrer">
             <Download size={16} />
             Скачать
           </a>
@@ -102,7 +106,7 @@ export function Landing() {
                 Текст идёт по буквам, как в полноэкранном режиме. Прокрути вниз — увидишь.
               </p>
               <div className="hero-actions">
-                <a className="btn btn-primary" href={WIN} rel="noreferrer">
+                <a className="btn btn-primary" href={WIN_EXE} rel="noreferrer">
                   <Download size={16} />
                   Скачать для Windows
                 </a>
@@ -289,17 +293,18 @@ export function Landing() {
                 Поставь <span className="alt">и слушай.</span>
               </h2>
               <p className="section-lead">
-                Открой последний релиз, скачай установщик LomifyNEXT для Windows x64 и запусти его.
-                Права администратора нужны не всегда. Версия для Android живёт отдельно.
+                Кнопка качает последнюю сборку прямо с GitHub Releases — установщик LomifyNEXT для
+                Windows x64, без лишних кликов. Права администратора нужны не всегда. Версия для
+                Android живёт отдельно.
               </p>
             </div>
             <div className="download-panel glass">
               <div className="dl-actions">
-                <a className="btn btn-primary" href={WIN} rel="noreferrer">
+                <a className="btn btn-primary" href={WIN_EXE} rel="noreferrer">
                   <Download size={16} />
                   Скачать для Windows
                 </a>
-                <a className="btn btn-ghost" href={ANDROID} rel="noreferrer">
+                <a className="btn btn-ghost" href={APK} rel="noreferrer">
                   <Smartphone size={16} />
                   Android
                 </a>
