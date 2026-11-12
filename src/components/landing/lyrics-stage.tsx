@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  ArrowUpRight,
   AudioLines,
   Headphones,
   Heart,
@@ -389,25 +388,20 @@ export function LyricsStage() {
                     data-track={trackIndex}
                     className={trackIndex === 0 ? "track-block" : "track-block is-off"}
                   >
-                    {track.lines.map((line, lineIndex) => (
-                      <p
-                        key={`${track.id}-${lineIndex}`}
-                        data-line={lineIndex}
-                        className={lineIndex === 0 ? "lyric line-current" : "lyric line-next"}
-                      >
-                        {Array.from(line).map((char, charIndex) => (
-                          <span key={`${lineIndex}-${charIndex}`} className="ch">
-                            {char}
-                          </span>
-                        ))}
-                      </p>
+                {track.lines.map((line, lineIndex) => (
+                  <p
+                    key={`${track.id}-${lineIndex}`}
+                    data-line={lineIndex}
+                    className={lineIndex === 0 && trackIndex === 0 ? "lyric line-current" : "lyric line-next"}
+                    onClick={() => rewindToLine(stageRef.current, trackIndex, lineIndex)}
+                  >
+                    {Array.from(line).map((char, charIndex) => (
+                      <span key={`${lineIndex}-${charIndex}`} className="ch">
+                        {char}
+                      </span>
                     ))}
-                    {track.lyricsUrl ? (
-                      <a className="lyrics-link" href={track.lyricsUrl} target="_blank" rel="noreferrer">
-                        Полный текст песни — на Genius
-                        <ArrowUpRight size={14} />
-                      </a>
-                    ) : null}
+                  </p>
+                ))}
                   </div>
                 ))}
               </div>
@@ -519,5 +513,17 @@ function jump(stage: HTMLElement | null, direction: number) {
   }
   const before = model.trackLens.slice(0, track).reduce((sum, len) => sum + len, 0);
   const char = before + model.lineOffsets[track][line];
-  api.scrollToProgress(model.total === 0 ? 0 : char / model.total);
+  // Полсимвола внутрь строки: на стыке треков скролл не остаётся на прошлом треке.
+  api.scrollToProgress(model.total === 0 ? 0 : (char + 0.5) / model.total);
+}
+
+/* Клик по строке караоке — перемотка на неё. */
+function rewindToLine(stage: HTMLElement | null, trackIndex: number, lineIndex: number) {
+  if (!stage) return;
+  const api = (stage as HTMLElement & { __lyric?: LyricApi }).__lyric;
+  if (!api) return;
+  api.stop();
+  const before = model.trackLens.slice(0, trackIndex).reduce((sum, len) => sum + len, 0);
+  const char = before + model.lineOffsets[trackIndex][lineIndex];
+  api.scrollToProgress(model.total === 0 ? 0 : (char + 0.5) / model.total);
 }

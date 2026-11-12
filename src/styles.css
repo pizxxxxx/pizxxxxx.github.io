@@ -32,9 +32,12 @@
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --sec-pad: clamp(5rem, 9vw, 9rem);
-  /* Бумажная секция — резкий стык тёмное → светлое, как на референсе. */
-  --paper: #f1ece4;
-  --paper-raised: #fbf8f3;
+  /* Скроллбар под скин: ручка — поверхность, жёлоб — фон страницы. */
+  scrollbar-color: var(--color-surface-2) var(--color-bg);
+  /* Бумажная секция — резкий стык тёмное → светлое, как на референсе.
+     Тон меняется со скином (см. :root[data-skin]): персиковый — по умолчанию. */
+  --paper: #f5e9e1;
+  --paper-raised: #fdf3ec;
   --paper-ink: #17141c;
   --paper-muted: #5a5363;
   --paper-line: rgba(23, 20, 28, 0.12);
@@ -57,6 +60,10 @@
   --color-hot: #e6d9c3;
   --color-hot-ink: #191512;
   --color-violet: #9aa7b8;
+  /* Бумага под скин: тёплый кремовый. */
+  --paper: #f6efdc;
+  --paper-raised: #fcf7ea;
+  --accent-on-paper: #7d6234;
 }
 
 :root[data-skin="aurora"] {
@@ -72,6 +79,10 @@
   --color-hot: #8fb7ff;
   --color-hot-ink: #071021;
   --color-violet: #7c6cff;
+  /* Бумага под скин: сиренево-синяя. */
+  --paper: #e8eaf8;
+  --paper-raised: #f4f5fd;
+  --accent-on-paper: #3d55c4;
 }
 
 :root[data-skin="matte"] {
@@ -87,6 +98,10 @@
   --color-hot: #d9d5dc;
   --color-hot-ink: #17151a;
   --color-violet: #8f8a99;
+  /* Бумага под скин: шалфейно-зелёная. */
+  --paper: #e6ece0;
+  --paper-raised: #f2f6ee;
+  --accent-on-paper: #46553f;
 }
 
 :root[data-glass="flat"] {
@@ -534,13 +549,13 @@
 
 .hero-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.8rem;
   margin: 2rem 0 0;
   padding: 1.05rem 0 0;
   list-style: none;
   border-top: 1px solid color-mix(in oklab, var(--color-fg) 10%, transparent);
-  max-width: 34rem;
+  max-width: 38rem;
 }
 
 .hero-stats b {
@@ -912,6 +927,11 @@
   transition: transform 320ms cubic-bezier(0.22, 0.8, 0.2, 1);
 }
 
+/* Строки караоке кликабельны: клик перематывает на строку. */
+.lyric {
+  cursor: pointer;
+}
+
 .track-block.is-off {
   visibility: hidden;
 }
@@ -976,41 +996,6 @@
 }
 .stage.is-lyrics-hidden .cover-wrap {
   transform: scale(1);
-}
-
-.lyrics-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 1.1rem 0 0;
-  padding: 0.55rem 0.95rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in oklab, var(--color-fg) 22%, transparent);
-  background: color-mix(in oklab, var(--color-fg) 9%, transparent);
-  color: var(--color-fg);
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background 180ms var(--ease-out), transform 320ms var(--ease-spring), border-color 180ms var(--ease-out);
-}
-
-.lyrics-link svg {
-  opacity: 0.75;
-  transition: opacity 180ms var(--ease-out);
-}
-
-.lyrics-link:hover {
-  background: color-mix(in oklab, var(--color-fg) 17%, transparent);
-  border-color: color-mix(in oklab, var(--color-fg) 34%, transparent);
-}
-
-.lyrics-link:hover svg {
-  opacity: 1;
-}
-
-.lyrics-link:active {
-  transform: scale(0.97);
 }
 
 .shouts {
@@ -1352,6 +1337,8 @@
   background: var(--paper);
   color: var(--paper-ink);
   color-scheme: light;
+  /* Смена скина перекрашивает бумагу плавно, вместе с тёмным фоном. */
+  transition: background-color 500ms var(--ease-out);
   --color-fg: var(--paper-ink);
   --color-muted: var(--paper-muted);
   --color-dim: #645d6d;
@@ -1383,6 +1370,7 @@
   background: var(--paper-raised);
   border-color: var(--paper-line);
   box-shadow: 0 1px 0 rgba(23, 20, 28, 0.04);
+  transition: background-color 500ms var(--ease-out), border-color 300ms var(--ease-out), box-shadow 300ms var(--ease-out);
 }
 .sec--paper .theme-card[aria-pressed="true"] {
   border-color: var(--accent-on-paper);
@@ -1649,12 +1637,23 @@
 }
 
 /* ── Цена: бумажный блок с кассовым чеком ─────────────────────────────
-   Слева — копия и гигантский «0 ₽», справа чек, который вылезает над верхом
-   бумажной секции (отрицательный отгон наверх) и висит на тёмном рулоне. */
+   Слева — копия и гигантский «0 ₽», справа чек: прилетает листом на ветру
+   из-за правого края и распластывается на бумаге, при прокрутке вверх
+   уносится обратно. Секция клипает горизонталь: полёт не создаёт скроллбар. */
+.sec--price {
+  overflow-x: clip;
+}
+
 .price-grid {
   display: grid;
   gap: 3.4rem;
   align-items: start;
+}
+
+.price-receipt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .price-zero {
@@ -1697,25 +1696,6 @@
     grid-template-columns: minmax(0, 1fr) 400px;
     column-gap: clamp(3rem, 6vw, 6.5rem);
   }
-
-  /* Чек поднимается над секцией: рулон и верх листа висят в тёмной зоне.
-     Подъём ведётся скроллом (--rise от JS): пока секция входит в экран,
-     лист лежит ниже и слегка наклонён, к моменту чтения — на месте. */
-  .price-receipt {
-    margin-top: calc(-1 * var(--sec-pad) - 56px);
-  }
-
-  .receipt {
-    transform: translateY(calc((1 - var(--rise, 1)) * 148px))
-      rotate(calc((1 - var(--rise, 1)) * -1.4deg));
-    transform-origin: 50% 0%;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .receipt {
-      transform: none;
-    }
-  }
 }
 
 .receipt {
@@ -1723,31 +1703,124 @@
   z-index: 2;
   width: min(400px, 100%);
   margin-inline: auto;
+  transform-origin: 50% 50%;
   filter: drop-shadow(0 34px 44px rgba(23, 20, 28, 0.38)) drop-shadow(0 8px 12px rgba(23, 20, 28, 0.2));
+  /* До старта полёта лист прозрачен; .is-in от наблюдателя запускает кейфреймы. */
+  opacity: 0;
 }
 
-/* Тёмный рулон-держатель: шире листа, с верхним бликом. */
-.receipt-rod {
-  position: relative;
-  z-index: 2;
-  width: calc(100% + 36px);
-  margin-left: -18px;
-  height: 15px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #2e2a37, #17141c 62%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 14px -6px rgba(0, 0, 0, 0.5);
+/* Полёт «листка на ветру»: прилетает из-за правого края экрана, дважды
+   взмывает и проваливается, крутится на ±20° с лёгким skew/rotateY,
+   замедляется, и на последних кадрах ветер вдавливает лист в плоскость
+   страницы: лист чуть разворачивается к зрителю, а потом расплющивается
+   в ровную бумагу (rotateX и scale гаснут в ноль с микроперелётом). */
+.receipt.is-in {
+  opacity: 1;
+  animation:
+    receipt-fly 3.1s cubic-bezier(0.2, 0.72, 0.28, 1) both,
+    receipt-sway 6.5s ease-in-out 3.1s infinite alternate;
+}
+
+@keyframes receipt-fly {
+  0% {
+    opacity: 0;
+    transform: perspective(1100px) translate(115vw, 7vh) rotate(21deg) rotateY(-24deg) skewX(-7deg) scale(1.03);
+  }
+  9% {
+    opacity: 1;
+  }
+  30% {
+    transform: perspective(1100px) translate(52vw, -5.5vh) rotate(-15deg) rotateY(14deg) skewX(5deg) scale(1.03);
+  }
+  55% {
+    transform: perspective(1100px) translate(19vw, 4.5vh) rotate(12deg) rotateY(-9deg) skewX(-3.5deg) scale(1.02);
+  }
+  76% {
+    transform: perspective(1100px) translate(5vw, -2.6vh) rotate(-5.5deg) rotateY(5deg) skewX(2deg) scale(1.02);
+  }
+  88% {
+    /* ветер прижимает лист: он разворачивается плоскостью к зрителю */
+    transform: perspective(1100px) translate(0.4vw, 1.1vh) rotate(2.2deg) rotateY(1.2deg) rotateX(8deg) skewX(0deg) scale(1.045);
+  }
+  95% {
+    /* расплющивание в бумагу страницы с микроперелётом в обратную сторону */
+    transform: perspective(1100px) translate(-0.12vw, -0.35vh) rotate(-0.7deg) rotateY(0deg) rotateX(-3deg) skewX(0deg) scale(0.992);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1100px) translate(0, 0) rotate(0deg) rotateY(0deg) rotateX(0deg) skewX(0deg) scale(1);
+  }
+}
+
+/* Еле заметное остаточное покачивание после посадки. */
+@keyframes receipt-sway {
+  from {
+    transform: perspective(1100px) rotate(0.55deg);
+  }
+  to {
+    transform: perspective(1100px) rotate(-0.55deg);
+  }
+}
+
+/* Обратный полёт: при прокрутке вверх ветер сначала отлепляет и приподнимает
+   лист (он снова чуть разворачивается к зрителю), потом срывает и уносит
+   за правый край с набором скорости. */
+.receipt.is-out {
+  opacity: 1;
+  animation: receipt-fly-out 2.5s cubic-bezier(0.5, 0, 0.72, 0.4) both;
+}
+
+@keyframes receipt-fly-out {
+  0% {
+    opacity: 1;
+    transform: perspective(1100px) translate(0, 0) rotate(0deg) rotateY(0deg) rotateX(0deg) skewX(0deg) scale(1);
+  }
+  14% {
+    /* отлепился и взмыл навстречу ветру */
+    transform: perspective(1100px) translate(-0.8vw, -1.6vh) rotate(3.5deg) rotateY(5deg) rotateX(6deg) skewX(0deg) scale(1.04);
+  }
+  40% {
+    transform: perspective(1100px) translate(22vw, -5vh) rotate(-13deg) rotateY(-12deg) skewX(4deg) scale(1.02);
+  }
+  68% {
+    transform: perspective(1100px) translate(56vw, 2.5vh) rotate(15deg) rotateY(15deg) skewX(-5deg) scale(1.01);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1100px) translate(118vw, 7vh) rotate(23deg) rotateY(-22deg) skewX(-7deg) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .receipt {
+    opacity: 1;
+  }
+
+  .receipt.is-in {
+    animation: receipt-appear 420ms ease both;
+  }
+
+  @keyframes receipt-appear {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 .receipt-sheet {
   position: relative;
-  margin-top: -7px;
   padding: 24px 22px 26px;
   background: var(--paper-raised);
   color: var(--paper-ink);
   border: 1px solid rgba(23, 20, 28, 0.08);
-  border-top: 0;
-  border-radius: 0 0 4px 4px;
+  border-radius: 7px 7px 4px 4px;
   font-family: var(--font-mono);
+  transition: background-color 500ms var(--ease-out);
 }
 
 .r-brand {
@@ -1872,6 +1945,34 @@
   height: 12px;
   margin-top: -1px;
   color: var(--paper-raised);
+  transition: color 500ms var(--ease-out);
+}
+
+/* «Подуть ещё раз» — перезапуск полёта чека. */
+.r-blow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 1.1rem auto 0;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--paper-line);
+  background: transparent;
+  color: var(--paper-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out), transform 120ms var(--ease-out);
+}
+
+.r-blow:hover {
+  color: var(--accent-on-paper);
+  border-color: var(--accent-on-paper);
+}
+
+.r-blow:active {
+  transform: scale(0.96);
 }
 
 /* Финальная строка секции цены: кнопки платформ и mono-сводка версий. */
@@ -2062,7 +2163,6 @@
   .nav-links a,
   .menu-panel a,
   .lyrics-wrap,
-  .lyrics-link,
   .shout,
   .cover-wrap,
   .hide-lyrics,

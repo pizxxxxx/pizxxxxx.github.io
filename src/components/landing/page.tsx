@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  ArrowDown,
   ArrowUpRight,
   AudioLines,
   Cloud,
@@ -14,6 +13,7 @@ import {
   SlidersHorizontal,
   Smartphone,
   Waves,
+  Wind,
   X,
 } from "lucide-react";
 import { libraryRows, sideLinks, themes, type SkinId } from "./data";
@@ -27,7 +27,6 @@ import { WaveCanvas } from "./wave-canvas";
 const WIN_DL = "/download.html?app=desktop";
 const APK_DL = "/download.html?app=mobile";
 const SOURCE = "https://github.com/pizxxxxx/LomifyNEXT";
-const GENIUS_DEJURE = "https://genius.com/Xvii-de-jure-lyrics";
 
 const sideIcons = [Library, Search, Waves, AudioLines, Heart];
 
@@ -60,31 +59,79 @@ export function Landing() {
     document.documentElement.dataset.glass = "high";
   }, [skin]);
 
-  // Чек выезжает из бумаги по мере прокрутки: чем глубже зашли в секцию цены,
-  // тем выше поднимается лист. 0 — лежит внутри секции, 1 — висит над срезом.
+  // Чек живёт как листок на ветру: при входе секции цены в кадр прилетает
+  // справа (полёт по keyframes), при прокрутке вверх — ветер срывает лист
+  // и уносит обратно за правый край, при возврате вниз он прилетает снова.
+  // Кнопка «подуть ещё раз» перезапускает полёт; reduced-motion — статика.
   useEffect(() => {
     const receipt = document.querySelector<HTMLElement>(".receipt");
     const section = document.getElementById("download");
     if (!receipt || !section) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let seen = false; // чек уже показывался — до этого реверс не нужен
+    let leaving = false; // играет (или сыграл) обратный полёт
+    let upDist = 0; // накопленный ход вверх — защита от дрожи тачпада
+    let lastY = window.scrollY;
     let frame = 0;
+
+    const flyOut = () => {
+      leaving = true;
+      upDist = 0;
+      receipt.classList.remove("is-in");
+      void receipt.offsetWidth;
+      receipt.classList.add("is-out");
+    };
+    const flyIn = () => {
+      leaving = false;
+      upDist = 0;
+      receipt.classList.remove("is-out");
+      void receipt.offsetWidth;
+      receipt.classList.add("is-in");
+    };
+
     const paint = () => {
       frame = 0;
-      const vh = window.innerHeight;
+      const y = window.scrollY;
+      const dy = lastY - y; // >0 — листают вверх
       const top = section.getBoundingClientRect().top;
-      // Линейная привязка к скроллу: лист лезет ровно по мере прокрутки.
-      const p = Math.min(1, Math.max(0, (vh - top) / (vh * 0.55)));
-      receipt.style.setProperty("--rise", p.toFixed(4));
+      lastY = y;
+      if (!seen) return;
+      if (!leaving) {
+        if (dy > 0) upDist += dy;
+        else upDist = 0;
+        // Уходишь вверх от секции — лист уносит ветром.
+        if (upDist > 140 && top > window.innerHeight * 0.35) flyOut();
+      } else if (top < window.innerHeight * 0.35) {
+        // Передумал и снова листаешь вниз — чек возвращается полётом.
+        flyIn();
+      }
     };
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(paint);
     };
-    paint();
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            seen = true;
+            if (leaving) flyIn();
+            else if (!receipt.classList.contains("is-in")) receipt.classList.add("is-in");
+          } else if (entry.boundingClientRect.top < 0) {
+            // Проскочили секцию вниз — чек остаётся на месте.
+            seen = true;
+            if (!receipt.classList.contains("is-in")) receipt.classList.add("is-in");
+          }
+        }
+      },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0 },
+    );
+    io.observe(section);
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
     return () => {
+      io.disconnect();
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
       if (frame) cancelAnimationFrame(frame);
     };
   }, []);
@@ -195,10 +242,6 @@ export function Landing() {
                   <Download size={16} />
                   Скачать для Windows
                 </a>
-                <a className="btn btn-ghost" href="#text">
-                  Смотреть текст
-                  <ArrowDown size={16} />
-                </a>
               </div>
               <p className="hero-meta mono">x64 · бесплатно · GPL-3.0</p>
               <ul className="hero-stats mono">
@@ -217,6 +260,10 @@ export function Landing() {
                 <li>
                   <b>GPL-3.0</b>
                   <span>лицензия</span>
+                </li>
+                <li>
+                  <b>26</b>
+                  <span>обновлений</span>
                 </li>
               </ul>
               <p className="hero-note mono">* без рекламы и трекеров · обновления — через GitHub Releases</p>
@@ -268,13 +315,8 @@ export function Landing() {
                 </h2>
                 <p className="section-lead">
                   В полноэкранном режиме строчка зажигается по таймкоду трека — буква за буквой.
-                  Ниже то же самое, только прокруткой. Полные тексты публикуем не здесь: их читают
-                  на Genius.
+                  Ниже то же самое, только прокруткой: едут преимущества плеера, строка за строкой.
                 </p>
-                <a className="sec-link" href={GENIUS_DEJURE} target="_blank" rel="noreferrer">
-                  Полные тексты — на Genius
-                  <ArrowUpRight size={14} />
-                </a>
               </div>
             </div>
           </section>
@@ -423,7 +465,6 @@ export function Landing() {
               </div>
               <div className="price-receipt">
                 <div className="receipt">
-                  <div className="receipt-rod" aria-hidden="true" />
                   <div className="receipt-sheet">
                     <p className="r-brand">LOMIFY·STORE</p>
                     <p className="r-meta">касса №1 · чек №0001 · без сдачи</p>
@@ -449,6 +490,20 @@ export function Landing() {
                     <path d={RECEIPT_TEAR} fill="currentColor" />
                   </svg>
                 </div>
+                <button
+                  type="button"
+                  className="r-blow mono"
+                  onClick={() => {
+                    const r = document.querySelector<HTMLElement>(".receipt");
+                    if (!r || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+                    r.classList.remove("is-in", "is-out");
+                    void r.offsetWidth;
+                    r.classList.add("is-in");
+                  }}
+                >
+                  <Wind size={14} />
+                  подуть ещё раз
+                </button>
               </div>
             </div>
             <div className="dl-finale">
