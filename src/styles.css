@@ -1705,110 +1705,33 @@
   margin-inline: auto;
   transform-origin: 50% 50%;
   filter: drop-shadow(0 34px 44px rgba(23, 20, 28, 0.38)) drop-shadow(0 8px 12px rgba(23, 20, 28, 0.2));
-  /* До старта полёта лист прозрачен; .is-in от наблюдателя запускает кейфреймы. */
+  /* До старта полёта лист прозрачен; кадры полёта красит JS-движок. */
   opacity: 0;
 }
 
-/* Полёт «листка на ветру»: прилетает из-за правого края экрана, дважды
-   взмывает и проваливается, крутится на ±20° с лёгким skew/rotateY,
-   замедляется, и на последних кадрах ветер вдавливает лист в плоскость
-   страницы: лист чуть разворачивается к зрителю, а потом расплющивается
-   в ровную бумагу (rotateX и scale гаснут в ноль с микроперелётом). */
+/* Полётом ведёт JS (page.tsx): по кадрам считает траекторию, вращение
+   и силу «мятости» через SVG-фильтр ниже. CSS держит только видимость
+   листа и еле заметное живое покачивание после посадки. */
 .receipt.is-in {
   opacity: 1;
-  animation:
-    receipt-fly 3.1s cubic-bezier(0.2, 0.72, 0.28, 1) both,
-    receipt-sway 6.5s ease-in-out 3.1s infinite alternate;
 }
 
-@keyframes receipt-fly {
-  0% {
-    opacity: 0;
-    transform: perspective(1100px) translate(115vw, 7vh) rotate(21deg) rotateY(-24deg) skewX(-7deg) scale(1.03);
-  }
-  9% {
-    opacity: 1;
-  }
-  30% {
-    transform: perspective(1100px) translate(52vw, -5.5vh) rotate(-15deg) rotateY(14deg) skewX(5deg) scale(1.03);
-  }
-  55% {
-    transform: perspective(1100px) translate(19vw, 4.5vh) rotate(12deg) rotateY(-9deg) skewX(-3.5deg) scale(1.02);
-  }
-  76% {
-    transform: perspective(1100px) translate(5vw, -2.6vh) rotate(-5.5deg) rotateY(5deg) skewX(2deg) scale(1.02);
-  }
-  88% {
-    /* ветер прижимает лист: он разворачивается плоскостью к зрителю */
-    transform: perspective(1100px) translate(0.4vw, 1.1vh) rotate(2.2deg) rotateY(1.2deg) rotateX(8deg) skewX(0deg) scale(1.045);
-  }
-  95% {
-    /* расплющивание в бумагу страницы с микроперелётом в обратную сторону */
-    transform: perspective(1100px) translate(-0.12vw, -0.35vh) rotate(-0.7deg) rotateY(0deg) rotateX(-3deg) skewX(0deg) scale(0.992);
-  }
-  100% {
-    opacity: 1;
-    transform: perspective(1100px) translate(0, 0) rotate(0deg) rotateY(0deg) rotateX(0deg) skewX(0deg) scale(1);
-  }
+.receipt.is-rest {
+  animation: receipt-sway 5.5s ease-in-out infinite alternate;
 }
 
-/* Еле заметное остаточное покачивание после посадки. */
 @keyframes receipt-sway {
   from {
-    transform: perspective(1100px) rotate(0.55deg);
+    transform: perspective(1100px) rotate(0.45deg);
   }
   to {
-    transform: perspective(1100px) rotate(-0.55deg);
-  }
-}
-
-/* Обратный полёт: при прокрутке вверх ветер сначала отлепляет и приподнимает
-   лист (он снова чуть разворачивается к зрителю), потом срывает и уносит
-   за правый край с набором скорости. */
-.receipt.is-out {
-  opacity: 1;
-  animation: receipt-fly-out 2.5s cubic-bezier(0.5, 0, 0.72, 0.4) both;
-}
-
-@keyframes receipt-fly-out {
-  0% {
-    opacity: 1;
-    transform: perspective(1100px) translate(0, 0) rotate(0deg) rotateY(0deg) rotateX(0deg) skewX(0deg) scale(1);
-  }
-  14% {
-    /* отлепился и взмыл навстречу ветру */
-    transform: perspective(1100px) translate(-0.8vw, -1.6vh) rotate(3.5deg) rotateY(5deg) rotateX(6deg) skewX(0deg) scale(1.04);
-  }
-  40% {
-    transform: perspective(1100px) translate(22vw, -5vh) rotate(-13deg) rotateY(-12deg) skewX(4deg) scale(1.02);
-  }
-  68% {
-    transform: perspective(1100px) translate(56vw, 2.5vh) rotate(15deg) rotateY(15deg) skewX(-5deg) scale(1.01);
-  }
-  100% {
-    opacity: 0;
-    transform: perspective(1100px) translate(118vw, 7vh) rotate(23deg) rotateY(-22deg) skewX(-7deg) scale(1);
+    transform: perspective(1100px) rotate(-0.45deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .receipt {
     opacity: 1;
-  }
-
-  .receipt.is-in {
-    animation: receipt-appear 420ms ease both;
-  }
-
-  @keyframes receipt-appear {
-    from {
-      opacity: 0;
-      transform: translateY(14px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
   }
 }
 
@@ -1948,31 +1871,13 @@
   transition: color 500ms var(--ease-out);
 }
 
-/* «Подуть ещё раз» — перезапуск полёта чека. */
-.r-blow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 1.1rem auto 0;
-  padding: 0.5rem 1rem;
-  border-radius: 999px;
-  border: 1px solid var(--paper-line);
-  background: transparent;
-  color: var(--paper-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  transition: color 160ms var(--ease-out), border-color 160ms var(--ease-out), transform 120ms var(--ease-out);
-}
-
-.r-blow:hover {
-  color: var(--accent-on-paper);
-  border-color: var(--accent-on-paper);
-}
-
-.r-blow:active {
-  transform: scale(0.96);
+/* Невидимый SVG с фильтром «мятости»: сам по себе ничего не рисует,
+   во время полёта JS дёргает scale смещения в его кадрах. */
+.r-crumple-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 
 /* Финальная строка секции цены: кнопки платформ и mono-сводка версий. */

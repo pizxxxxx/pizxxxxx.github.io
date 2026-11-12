@@ -13,7 +13,6 @@ import {
   SlidersHorizontal,
   Smartphone,
   Waves,
-  Wind,
   X,
 } from "lucide-react";
 import { libraryRows, sideLinks, themes, type SkinId } from "./data";
@@ -59,36 +58,111 @@ export function Landing() {
     document.documentElement.dataset.glass = "high";
   }, [skin]);
 
-  // Чек живёт как листок на ветру: при входе секции цены в кадр прилетает
-  // справа (полёт по keyframes), при прокрутке вверх — ветер срывает лист
-  // и уносит обратно за правый край, при возврате вниз он прилетает снова.
-  // Кнопка «подуть ещё раз» перезапускает полёт; reduced-motion — статика.
+  // Чек — листок на ветру: влетает справа, мнётся о порывы (SVG-фильтр
+  // смещения мнёт края листа) и распластывается на бумаге; при прокрутке
+  // вверх ветер срывает его и уносит обратно за правый край. Полёт ведёт
+  // JS по кадрам: траектория, вращение и сила «мятости» считаются на ходу.
   useEffect(() => {
     const receipt = document.querySelector<HTMLElement>(".receipt");
     const section = document.getElementById("download");
     if (!receipt || !section) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const disp = document.querySelector<SVGElement>("#receipt-displace");
+    const turb = document.querySelector<SVGElement>("#receipt-turb");
+    let raf = 0;
+    const SHADOW = "drop-shadow(0 34px 44px rgba(23, 20, 28, 0.38)) drop-shadow(0 8px 12px rgba(23, 20, 28, 0.2))";
+
+    const stop = () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
+    /* dir 1 — порыв несёт лист из-за правого края на его место;
+       dir -1 — обратный: ветер отлепляет лист и уносит за край. */
+    const fly = (dir: 1 | -1) => {
+      stop();
+      receipt.classList.remove("is-in", "is-out", "is-rest");
+      if (reduced) {
+        receipt.style.opacity = "";
+        receipt.style.filter = "";
+        receipt.style.transform = "";
+        receipt.classList.add("is-in");
+        return;
+      }
+      void receipt.offsetWidth;
+      receipt.classList.add(dir === 1 ? "is-in" : "is-out");
+      // каждый порыв мнёт лист по-новому
+      turb?.setAttribute("seed", String(1 + Math.floor(Math.random() * 899)));
+      const T = dir === 1 ? 1700 : 1150;
+      const t0 = performance.now();
+      receipt.style.willChange = "transform, filter, opacity";
+
+      const step = (now: number) => {
+        // кламп сверху и снизу: таймстемп кадра может прийти раньше t0 —
+        // отрицательный p дал бы NaN в pow(sin(p·π), …) у атрибута scale
+        const p = Math.max(0, Math.min(1, (now - t0) / T));
+        const e = 1 - Math.pow(1 - p, 2.3); // горизонтальный ход тормозится к посадке
+        const wob = Math.sin(p * Math.PI * 2.4 + 0.7) * Math.pow(1 - p, 1.25);
+        const wob2 = Math.sin(p * Math.PI * 4.6 + 1.9) * Math.pow(1 - p, 2);
+        let x: number, y: number, rot: number, ry: number, rx = 0, sk: number, sc: number, crumple: number, opacity = 1;
+
+        if (dir === 1) {
+          x = 112 * (1 - e);
+          y = 6.5 * (1 - e) + 5.4 * wob + 1.7 * wob2;
+          rot = 15 * Math.pow(1 - e, 0.85) + 8.5 * wob;
+          ry = -17 * (1 - e) + 9 * wob;
+          sk = -5.5 * (1 - e) + 3.5 * wob;
+          sc = 1 + 0.03 * (1 - e);
+          // последние кадры: ветер прижимает лист к плоскости страницы
+          if (p > 0.8) rx = 9 * Math.sin(((p - 0.8) / 0.2) * Math.PI);
+          crumple = 34 * Math.pow(Math.sin(p * Math.PI), 0.7);
+          opacity = p < 0.05 ? p / 0.05 : 1;
+        } else {
+          const q = Math.pow(p, 2.1); // разгон вправо
+          x = 118 * q - 1.4 * Math.sin(p * Math.PI) * (1 - q);
+          y = -1.8 * Math.sin(p * Math.PI * 1.15) * (1 - q * 0.6);
+          rot = 4 * Math.sin(p * Math.PI * 2.2) + 20 * q;
+          ry = 6 * Math.sin(p * Math.PI * 1.8) - 20 * q;
+          sk = 3 * Math.sin(p * Math.PI * 1.5) - 6 * q;
+          sc = 1 + 0.03 * Math.sin(p * Math.PI) - 0.01 * q;
+          crumple = 30 * Math.pow(Math.sin(Math.min(1, p * 1.12) * Math.PI), 0.7);
+          opacity = p > 0.88 ? (1 - p) / 0.12 : 1;
+        }
+
+        receipt.style.opacity = opacity.toFixed(3);
+        receipt.style.transform =
+          `perspective(1100px) translate(${x.toFixed(2)}vw, ${y.toFixed(2)}vh) rotate(${rot.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) rotateX(${rx.toFixed(2)}deg) skewX(${sk.toFixed(2)}deg) scale(${sc.toFixed(3)})`;
+        disp?.setAttribute("scale", crumple.toFixed(1));
+        receipt.style.filter = `url(#receipt-crumple) ${SHADOW}`;
+
+        if (p < 1) {
+          raf = requestAnimationFrame(step);
+          return;
+        }
+        receipt.style.willChange = "";
+        disp?.setAttribute("scale", "0");
+        receipt.style.transform = "";
+        receipt.style.filter = "";
+        if (dir === 1) {
+          // лист распластан: ровно, с еле заметным живым покачиванием
+          receipt.style.opacity = "1";
+          receipt.classList.add("is-rest");
+        } else {
+          // унесён за край: прозрачен до следующего порыва
+          receipt.style.opacity = "0";
+        }
+        raf = 0;
+      };
+      raf = requestAnimationFrame(step);
+    };
 
     let seen = false; // чек уже показывался — до этого реверс не нужен
     let leaving = false; // играет (или сыграл) обратный полёт
     let upDist = 0; // накопленный ход вверх — защита от дрожи тачпада
     let lastY = window.scrollY;
     let frame = 0;
-
-    const flyOut = () => {
-      leaving = true;
-      upDist = 0;
-      receipt.classList.remove("is-in");
-      void receipt.offsetWidth;
-      receipt.classList.add("is-out");
-    };
-    const flyIn = () => {
-      leaving = false;
-      upDist = 0;
-      receipt.classList.remove("is-out");
-      void receipt.offsetWidth;
-      receipt.classList.add("is-in");
-    };
 
     const paint = () => {
       frame = 0;
@@ -100,11 +174,17 @@ export function Landing() {
       if (!leaving) {
         if (dy > 0) upDist += dy;
         else upDist = 0;
-        // Уходишь вверх от секции — лист уносит ветром.
-        if (upDist > 140 && top > window.innerHeight * 0.35) flyOut();
+        // Уходишь вверх от секции — ветер срывает лист.
+        if (upDist > 140 && top > window.innerHeight * 0.35) {
+          leaving = true;
+          upDist = 0;
+          fly(-1);
+        }
       } else if (top < window.innerHeight * 0.35) {
-        // Передумал и снова листаешь вниз — чек возвращается полётом.
-        flyIn();
+        // Снова листаешь вниз — чек возвращается полётом.
+        leaving = false;
+        upDist = 0;
+        fly(1);
       }
     };
     const onScroll = () => {
@@ -116,12 +196,17 @@ export function Landing() {
         for (const entry of entries) {
           if (entry.isIntersecting) {
             seen = true;
-            if (leaving) flyIn();
-            else if (!receipt.classList.contains("is-in")) receipt.classList.add("is-in");
+            if (leaving) {
+              leaving = false;
+              upDist = 0;
+              fly(1);
+            } else if (!receipt.classList.contains("is-in")) {
+              fly(1);
+            }
           } else if (entry.boundingClientRect.top < 0) {
             // Проскочили секцию вниз — чек остаётся на месте.
             seen = true;
-            if (!receipt.classList.contains("is-in")) receipt.classList.add("is-in");
+            if (!receipt.classList.contains("is-in")) fly(1);
           }
         }
       },
@@ -130,9 +215,10 @@ export function Landing() {
     io.observe(section);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
+      stop();
+      if (frame) cancelAnimationFrame(frame);
       io.disconnect();
       window.removeEventListener("scroll", onScroll);
-      if (frame) cancelAnimationFrame(frame);
     };
   }, []);
 
@@ -490,20 +576,29 @@ export function Landing() {
                     <path d={RECEIPT_TEAR} fill="currentColor" />
                   </svg>
                 </div>
-                <button
-                  type="button"
-                  className="r-blow mono"
-                  onClick={() => {
-                    const r = document.querySelector<HTMLElement>(".receipt");
-                    if (!r || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-                    r.classList.remove("is-in", "is-out");
-                    void r.offsetWidth;
-                    r.classList.add("is-in");
-                  }}
-                >
-                  <Wind size={14} />
-                  подуть ещё раз
-                </button>
+                  {/* Фильтр «мятости»: невидимый SVG в документе; во время
+                      полёта JS дёргает scale смещения по кадрам, а seed
+                      рандомится на каждый порыв — лист мнётся по-новому. */}
+                  <svg className="r-crumple-defs" aria-hidden="true" focusable="false">
+                    <filter id="receipt-crumple" x="-15%" y="-15%" width="130%" height="130%">
+                      <feTurbulence
+                        id="receipt-turb"
+                        type="fractalNoise"
+                        baseFrequency="0.013 0.024"
+                        numOctaves={2}
+                        seed={3}
+                        result="noise"
+                      />
+                      <feDisplacementMap
+                        id="receipt-displace"
+                        in="SourceGraphic"
+                        in2="noise"
+                        scale={0}
+                        xChannelSelector="R"
+                        yChannelSelector="G"
+                      />
+                    </filter>
+                  </svg>
               </div>
             </div>
             <div className="dl-finale">
