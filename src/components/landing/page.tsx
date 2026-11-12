@@ -20,12 +20,12 @@ import { libraryRows, sideLinks, themes, type SkinId } from "./data";
 import { LyricsStage } from "./lyrics-stage";
 import { WaveCanvas } from "./wave-canvas";
 
-// Прямые ссылки на ассеты последнего релиза (GitHub отдаёт файл сразу).
-// Имя ассета содержит версию — при новом релизе обновить обе строки.
-const WIN_EXE =
-  "https://github.com/pizxxxxx/LomifyNEXT/releases/latest/download/LomifyNEXT_9.6.4_x64-setup.exe";
-const APK =
-  "https://github.com/pizxxxxx/LomifyNEXT-Mobile/releases/latest/download/LomifyNEXT-1.0.37-arm64.apk";
+// Кнопки ведут на внутренний редиректор: он спрашивает GitHub API о последнем
+// релизе и сразу перекидывает на файл ассета (exe/apk). Если API недоступен,
+// редиректор пробует прямой адрес ассета, а затем страницу релизов. Имена
+// файлов с версиями больше не ломают ссылку.
+const WIN_DL = "/download.html?app=desktop";
+const APK_DL = "/download.html?app=mobile";
 const SOURCE = "https://github.com/pizxxxxx/LomifyNEXT";
 const GENIUS_DEJURE = "https://genius.com/Xvii-de-jure-lyrics";
 
@@ -56,7 +56,7 @@ export function Landing() {
           <a href="#download">Скачать</a>
         </nav>
         <div className="nav-actions">
-          <a className="btn btn-primary" href={WIN_EXE} rel="noreferrer">
+          <a className="btn btn-primary" href={WIN_DL}>
             <Download size={16} />
             Скачать
           </a>
@@ -106,7 +106,7 @@ export function Landing() {
                 Текст идёт по буквам, как в полноэкранном режиме. Прокрути вниз — увидишь.
               </p>
               <div className="hero-actions">
-                <a className="btn btn-primary" href={WIN_EXE} rel="noreferrer">
+                <a className="btn btn-primary" href={WIN_DL}>
                   <Download size={16} />
                   Скачать для Windows
                 </a>
@@ -300,11 +300,11 @@ export function Landing() {
             </div>
             <div className="download-panel glass">
               <div className="dl-actions">
-                <a className="btn btn-primary" href={WIN_EXE} rel="noreferrer">
+                <a className="btn btn-primary" href={WIN_DL}>
                   <Download size={16} />
                   Скачать для Windows
                 </a>
-                <a className="btn btn-ghost" href={APK} rel="noreferrer">
+                <a className="btn btn-ghost" href={APK_DL}>
                   <Smartphone size={16} />
                   Android
                 </a>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Скачиваем LomifyNEXT…</title>
+<style>
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    display: grid;
+    place-items: center;
+    background: #0c0b0d;
+    color: #9c958e;
+    font: 500 13px/1.6 "Segoe UI", system-ui, sans-serif;
+    letter-spacing: 0.08em;
+  }
+  .box { text-align: center; }
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 10px;
+    border-radius: 999px;
+    background: #ff4a17;
+    vertical-align: middle;
+    animation: pulse 1.2s ease infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+  a { color: #f6f3f0; }
+  .manual { margin: 14px 0 0; font-size: 11px; letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+<div class="box">
+  <p><span class="dot"></span><span id="status">ищем последний релиз…</span></p>
+  <p class="manual">не началось? <a id="manual" href="https://github.com/pizxxxxx/LomifyNEXT/releases/latest">открой релизы вручную</a></p>
+  <noscript><p class="manual">JS выключен — <a href="https://github.com/pizxxxxx/LomifyNEXT/releases/latest">страница релизов</a></p></noscript>
+</div>
+<script>
+(async () => {
+  // ?app=mobile ведёт на LomifyNEXT-Mobile (apk), иначе — десктопный exe.
+  const mobile = new URLSearchParams(location.search).get("app") === "mobile";
+  const repo = mobile ? "pizxxxxx/LomifyNEXT-Mobile" : "pizxxxxx/LomifyNEXT";
+  const page = "https://github.com/" + repo + "/releases/latest";
+  // Второй шанс, когда API недоступен: прямой адрес ассета последнего релиза.
+  // github.com может работать, даже когда api.github.com нет. Имя содержит
+  // версию — при новом релизе обнови эту строку (desktop 9.6.4 / mobile 1.0.37).
+  const directAsset = mobile
+    ? "https://github.com/" + repo + "/releases/latest/download/LomifyNEXT-1.0.37-arm64.apk"
+    : "https://github.com/" + repo + "/releases/latest/download/LomifyNEXT_9.6.4_x64-setup.exe";
+  const status = document.getElementById("status");
+  const manual = document.getElementById("manual");
+  manual.href = page;
+
+  // Приоритет ассетов: точное имя → общий суффикс → любой подходящий файл.
+  const rules = mobile
+    ? [(a) => /arm64\.apk$/i.test(a.name), (a) => /\.apk$/i.test(a.name)]
+    : [(a) => /x64-setup\.exe$/i.test(a.name), (a) => /setup\.exe$/i.test(a.name), (a) => /\.exe$/i.test(a.name)];
+
+  try {
+    const signal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(9000) : undefined;
+    const res = await fetch("https://api.github.com/repos/" + repo + "/releases/latest", {
+      headers: { Accept: "application/vnd.github+json" },
+      signal,
+    });
+    if (!res.ok) throw new Error(String(res.status));
+    const rel = await res.json();
+    let url = null;
+    for (const rule of rules) {
+      const hit = (rel.assets || []).find(rule);
+      if (hit) { url = hit.browser_download_url; break; }
+    }
+    if (!url) throw new Error("no asset");
+    status.textContent = "начинаем скачивание…";
+    location.replace(url);
+  } catch (e) {
+    // API недоступен (сеть, лимит) — идём на прямой адрес ассета: это обычная
+    // навигация, CORS не мешает, и github.com может работать, даже когда
+    // api.github.com нет. Если имя устарело (вышел новый релиз) — GitHub
+    // покажет свою 404, оттуда один клик до страницы релизов.
+    status.textContent = "api недоступен — качаем последний релиз напрямую…";
+    location.replace(directAsset);
+  }
+})();
+</script>
+</body>
+</html>
