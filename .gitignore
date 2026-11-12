@@ -1,0 +1,21 @@
+# dependencies / build output
+node_modules/
+.output/
+.nitro/
+.tanstack/
+.vercel/
+.node_modules.lock
+
+# local tooling & sandbox state (keep the build-flag carrier)
+.grok/*
+!.grok/app-env.json
+
+# local artifacts
+screenshots/
+artifacts/
+attachments/
+*.zip
+*.log
+
+# secrets (none expected — env comes from the platform)
+.env
