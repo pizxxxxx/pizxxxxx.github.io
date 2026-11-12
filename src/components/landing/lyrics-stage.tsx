@@ -26,23 +26,52 @@ function fillSlider(el: HTMLInputElement, ratio: number) {
 const model = buildModel(tracks);
 const PLAY_SECONDS = 52;
 
-/** Декоративные адлибы-«выкрики» поверх обложки (междометия из трека, не строки текста). */
-type Shout = { text: string; x: number; y: number; rot: number; size: number; outline?: boolean };
+/**
+ * Декоративные адлибы-«выкрики» поверх обложки: междометия из трека, не строки
+ * текста. at — момент появления, доля локального хода трека (0..1): выкрик
+ * вспыхивает вовремя, пока идёт «воспроизведение», и гаснет к следующему.
+ */
+type Shout = { text: string; x: number; y: number; rot: number; size: number; at: number; outline?: boolean };
 const SHOUTS: Record<string, Shout[]> = {
   dejure: [
-    { text: "Е", x: 70, y: 15, rot: -10, size: 2.1, outline: true },
-    { text: "М-м", x: 8, y: 40, rot: 7, size: 1.35 },
-    { text: "Да-да", x: 52, y: 53, rot: -5, size: 1.15 },
-    { text: "Ага", x: 12, y: 69, rot: -9, size: 1.3 },
-    { text: "У-у", x: 9, y: 10, rot: 6, size: 1, outline: true },
+    { text: "Е", x: 70, y: 15, rot: -10, size: 2.8, at: 0.04, outline: true },
+    { text: "М-м", x: 8, y: 40, rot: 7, size: 1.9, at: 0.12 },
+    { text: "Да-да", x: 52, y: 53, rot: -5, size: 1.7, at: 0.24 },
+    { text: "Ага", x: 12, y: 69, rot: -9, size: 1.9, at: 0.36 },
+    { text: "У-у", x: 9, y: 10, rot: 6, size: 1.6, at: 0.48, outline: true },
+    { text: "Я-я", x: 62, y: 76, rot: 8, size: 1.7, at: 0.62 },
+    { text: "Е", x: 30, y: 26, rot: -7, size: 2.2, at: 0.78, outline: true },
   ],
   cupsize: [
-    { text: "муа", x: 58, y: 33, rot: -8, size: 1.9, outline: true },
-    { text: "м-м", x: 10, y: 13, rot: 8, size: 1.2 },
-    { text: "а-а", x: 78, y: 57, rot: 6, size: 1.15 },
-    { text: "да", x: 40, y: 75, rot: -6, size: 1.05 },
+    { text: "муа", x: 58, y: 33, rot: -8, size: 2.6, at: 0.06, outline: true },
+    { text: "м-м", x: 10, y: 13, rot: 8, size: 1.7, at: 0.22 },
+    { text: "а-а", x: 78, y: 57, rot: 6, size: 1.6, at: 0.42 },
+    { text: "да", x: 40, y: 75, rot: -6, size: 1.5, at: 0.58 },
+    { text: "муа", x: 24, y: 18, rot: 7, size: 2.1, at: 0.8, outline: true },
   ],
 };
+
+// Доли треков в общем ходе сцены + глобальные моменты показа с окном до
+// следующего выкрика (массивы SHOUTS составлены в хронологическом порядке).
+const trackFracs = model.trackLens.map((len) => len / model.total);
+const trackStarts = model.trackLens.map((_, index) =>
+  model.trackLens.slice(0, index).reduce((sum, len) => sum + len, 0) / model.total,
+);
+type ShoutCue = Shout & { hold: number };
+const SHOUT_CUES: Record<string, ShoutCue[]> = {};
+tracks.forEach((track, trackIndex) => {
+  const shouts = SHOUTS[track.id];
+  if (!shouts) return;
+  SHOUT_CUES[track.id] = shouts.map((shout, index) => {
+    const nextAt = shouts[index + 1]?.at ?? shout.at + 0.1;
+    const hold = Math.min(0.09, Math.max(0.045, nextAt - shout.at - 0.012));
+    return {
+      ...shout,
+      at: trackStarts[trackIndex] + shout.at * trackFracs[trackIndex],
+      hold,
+    };
+  });
+});
 
 function progressFrom(stage: HTMLElement) {
   const total = stage.offsetHeight - window.innerHeight;
@@ -106,7 +135,18 @@ export function LyricsStage() {
         img.classList.toggle("is-on", img.dataset.cover === track.id);
       });
       stage.querySelectorAll<HTMLElement>("[data-shouts]").forEach((layer) => {
-        layer.classList.toggle("is-on", layer.dataset.shouts === track.id);
+        const active = layer.dataset.shouts === track.id;
+        layer.classList.toggle("is-on", active);
+        // Выкрик вспыхивает в свой момент и гаснет к следующему — вовремя.
+        layer.querySelectorAll<HTMLElement>("[data-shout]").forEach((el) => {
+          if (!active) {
+            el.classList.remove("is-on");
+            return;
+          }
+          const at = Number(el.dataset.at);
+          const hold = Number(el.dataset.hold);
+          el.classList.toggle("is-on", cursor.global >= at && cursor.global <= at + hold);
+        });
       });
       const wash = stage.querySelector<HTMLImageElement>(".stage-wash");
       if (wash && !wash.src.endsWith(track.cover)) wash.src = track.cover;
@@ -235,7 +275,6 @@ export function LyricsStage() {
 
   return (
     <section
-      id="text"
       ref={stageRef}
       className={lyricsOn ? "lyric-stage stage" : "lyric-stage stage is-lyrics-hidden"}
     >
@@ -251,23 +290,25 @@ export function LyricsStage() {
               <img data-cover="dejure" className="cover-img is-on" src="/covers/dejure.jpg" alt="Обложка сингла de jure — королевский XVII" />
               <img data-cover="cupsize" className="cover-img" src="/covers/cupsize.png" alt="Обложка сингла ты любишь танцевать — CUPSIZE" />
               {tracks.map((track) => {
-                const shouts = SHOUTS[track.id];
-                if (!shouts) return null;
+                const cues = SHOUT_CUES[track.id];
+                if (!cues) return null;
                 return (
                   <div key={track.id} data-shouts={track.id} className="shouts">
-                    {shouts.map((s, index) => (
+                    {cues.map((cue, index) => (
                       <span
-                        key={s.text}
-                        className={s.outline ? "shout is-outline" : "shout"}
+                        key={`${track.id}-${index}`}
+                        data-shout="1"
+                        data-at={cue.at.toFixed(4)}
+                        data-hold={cue.hold.toFixed(4)}
+                        className={cue.outline ? "shout is-outline" : "shout"}
                         style={{
-                          left: `${s.x}%`,
-                          top: `${s.y}%`,
-                          fontSize: `${s.size}rem`,
-                          transform: `rotate(${s.rot}deg)`,
-                          transitionDelay: `${index * 70}ms`,
+                          left: `${cue.x}%`,
+                          top: `${cue.y}%`,
+                          fontSize: `${cue.size}rem`,
+                          transform: `rotate(${cue.rot}deg)`,
                         }}
                       >
-                        {s.text}
+                        {cue.text}
                       </span>
                     ))}
                   </div>

@@ -5,6 +5,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 // on networks where Google Fonts is unreachable.
 import "@fontsource-variable/jost";
 import "@fontsource-variable/jost/wght-italic.css";
+import "@fontsource-variable/jetbrains-mono";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Lomify";
