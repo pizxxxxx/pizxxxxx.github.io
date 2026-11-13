@@ -552,7 +552,7 @@ export function Landing() {
                 <div className="receipt">
                   <div className="receipt-sheet">
                     <p className="r-brand">LOMIFY·STORE</p>
-                    <p className="r-meta">касса №1 · чек №0001 · без сдачи</p>
+                    <p className="r-meta">касса №1 · чек №1337 · без сдачи</p>
                     <ul className="r-lines">
                       <li><span>Плеер</span><i /><b>0 ₽</b></li>
                       <li><span>Тексты песен</span><i /><b>0 ₽</b></li>
