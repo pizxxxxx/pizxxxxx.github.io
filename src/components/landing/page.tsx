@@ -58,19 +58,16 @@ export function Landing() {
     document.documentElement.dataset.glass = "high";
   }, [skin]);
 
-  // Чек — листок на ветру: влетает справа, мнётся о порывы (SVG-фильтр
-  // смещения мнёт края листа) и распластывается на бумаге; при прокрутке
-  // вверх ветер срывает его и уносит обратно за правый край. Полёт ведёт
-  // JS по кадрам: траектория, вращение и сила «мятости» считаются на ходу.
+  // Чек — листок на ветру: влетает справа с разгоном и мягким торможением,
+  // без деформаций, и распластывается на бумаге; при прокрутке вверх ветер
+  // срывает его и уносит обратно за правый край с набором скорости. Полёт
+  // ведёт JS по кадрам: траектория и наклоны считаются на ходу.
   useEffect(() => {
     const receipt = document.querySelector<HTMLElement>(".receipt");
     const section = document.getElementById("download");
     if (!receipt || !section) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const disp = document.querySelector<SVGElement>("#receipt-displace");
-    const turb = document.querySelector<SVGElement>("#receipt-turb");
     let raf = 0;
-    const SHADOW = "drop-shadow(0 34px 44px rgba(23, 20, 28, 0.38)) drop-shadow(0 8px 12px rgba(23, 20, 28, 0.2))";
 
     const stop = () => {
       if (raf) {
@@ -86,65 +83,56 @@ export function Landing() {
       receipt.classList.remove("is-in", "is-out", "is-rest");
       if (reduced) {
         receipt.style.opacity = "";
-        receipt.style.filter = "";
         receipt.style.transform = "";
         receipt.classList.add("is-in");
         return;
       }
       void receipt.offsetWidth;
       receipt.classList.add(dir === 1 ? "is-in" : "is-out");
-      // каждый порыв мнёт лист по-новому
-      turb?.setAttribute("seed", String(1 + Math.floor(Math.random() * 899)));
       const T = dir === 1 ? 1700 : 1150;
       const t0 = performance.now();
-      receipt.style.willChange = "transform, filter, opacity";
+      receipt.style.willChange = "transform, opacity";
 
       const step = (now: number) => {
-        // кламп сверху и снизу: таймстемп кадра может прийти раньше t0 —
-        // отрицательный p дал бы NaN в pow(sin(p·π), …) у атрибута scale
+        // кламп с обеих сторон: таймстемп кадра может прийти раньше t0
         const p = Math.max(0, Math.min(1, (now - t0) / T));
-        const e = 1 - Math.pow(1 - p, 2.3); // горизонтальный ход тормозится к посадке
-        const wob = Math.sin(p * Math.PI * 2.4 + 0.7) * Math.pow(1 - p, 1.25);
-        const wob2 = Math.sin(p * Math.PI * 4.6 + 1.9) * Math.pow(1 - p, 2);
-        let x: number, y: number, rot: number, ry: number, rx = 0, sk: number, sc: number, crumple: number, opacity = 1;
+        // влёт — разгон и мягкое торможение (кубический ease-in-out);
+        // унос — медленный отлеп, дальше скорость только растёт
+        const e =
+          dir === 1
+            ? p < 0.5
+              ? 4 * p * p * p
+              : 1 - Math.pow(-2 * p + 2, 3) / 2
+            : Math.pow(p, 2.4);
+        const fall = Math.pow(1 - p, 1.15); // порывы затихают к посадке
+        let x: number, y: number, rot: number, ry: number, sc: number, opacity = 1;
 
         if (dir === 1) {
           x = 112 * (1 - e);
-          y = 6.5 * (1 - e) + 5.4 * wob + 1.7 * wob2;
-          rot = 15 * Math.pow(1 - e, 0.85) + 8.5 * wob;
-          ry = -17 * (1 - e) + 9 * wob;
-          sk = -5.5 * (1 - e) + 3.5 * wob;
-          sc = 1 + 0.03 * (1 - e);
-          // последние кадры: ветер прижимает лист к плоскости страницы
-          if (p > 0.8) rx = 9 * Math.sin(((p - 0.8) / 0.2) * Math.PI);
-          crumple = 34 * Math.pow(Math.sin(p * Math.PI), 0.7);
-          opacity = p < 0.05 ? p / 0.05 : 1;
+          // ниже цели, дуга вверх на разгоне и мягкий спуск на посадку
+          y = 6 * Math.pow(1 - e, 1.1) - 3.4 * Math.sin(Math.PI * p) * Math.pow(1 - p, 0.75);
+          rot = 7.5 * Math.pow(1 - e, 1.2) + 2.6 * Math.sin(Math.PI * 2.3 * p) * fall;
+          ry = -7 * (1 - e); // лёгкий разворот к зрителю выпрямляется к посадке
+          sc = 1 + 0.025 * (1 - e);
         } else {
-          const q = Math.pow(p, 2.1); // разгон вправо
-          x = 118 * q - 1.4 * Math.sin(p * Math.PI) * (1 - q);
-          y = -1.8 * Math.sin(p * Math.PI * 1.15) * (1 - q * 0.6);
-          rot = 4 * Math.sin(p * Math.PI * 2.2) + 20 * q;
-          ry = 6 * Math.sin(p * Math.PI * 1.8) - 20 * q;
-          sk = 3 * Math.sin(p * Math.PI * 1.5) - 6 * q;
-          sc = 1 + 0.03 * Math.sin(p * Math.PI) - 0.01 * q;
-          crumple = 30 * Math.pow(Math.sin(Math.min(1, p * 1.12) * Math.PI), 0.7);
-          opacity = p > 0.88 ? (1 - p) / 0.12 : 1;
+          x = 116 * e - 1.2 * Math.sin(Math.PI * p) * (1 - e);
+          y = -2.6 * Math.sin(Math.PI * 1.1 * p) * (1 - e * 0.7);
+          rot = 3.5 * Math.sin(Math.PI * 1.6 * p) + 14 * e;
+          ry = 8 * e;
+          sc = 1 - 0.015 * e;
+          opacity = p > 0.85 ? (1 - p) / 0.15 : 1;
         }
 
         receipt.style.opacity = opacity.toFixed(3);
         receipt.style.transform =
-          `perspective(1100px) translate(${x.toFixed(2)}vw, ${y.toFixed(2)}vh) rotate(${rot.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) rotateX(${rx.toFixed(2)}deg) skewX(${sk.toFixed(2)}deg) scale(${sc.toFixed(3)})`;
-        disp?.setAttribute("scale", crumple.toFixed(1));
-        receipt.style.filter = `url(#receipt-crumple) ${SHADOW}`;
+          `perspective(1100px) translate(${x.toFixed(2)}vw, ${y.toFixed(2)}vh) rotate(${rot.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) scale(${sc.toFixed(3)})`;
 
         if (p < 1) {
           raf = requestAnimationFrame(step);
           return;
         }
         receipt.style.willChange = "";
-        disp?.setAttribute("scale", "0");
         receipt.style.transform = "";
-        receipt.style.filter = "";
         if (dir === 1) {
           // лист распластан: ровно, с еле заметным живым покачиванием
           receipt.style.opacity = "1";
@@ -402,6 +390,7 @@ export function Landing() {
                 <p className="section-lead">
                   В полноэкранном режиме строчка зажигается по таймкоду трека — буква за буквой.
                   Ниже то же самое, только прокруткой: едут преимущества плеера, строка за строкой.
+                  У строки «Шрифты на вкус» начертание листается по ходу скролла — все двенадцать из плеера.
                 </p>
               </div>
             </div>
@@ -576,29 +565,6 @@ export function Landing() {
                     <path d={RECEIPT_TEAR} fill="currentColor" />
                   </svg>
                 </div>
-                  {/* Фильтр «мятости»: невидимый SVG в документе; во время
-                      полёта JS дёргает scale смещения по кадрам, а seed
-                      рандомится на каждый порыв — лист мнётся по-новому. */}
-                  <svg className="r-crumple-defs" aria-hidden="true" focusable="false">
-                    <filter id="receipt-crumple" x="-15%" y="-15%" width="130%" height="130%">
-                      <feTurbulence
-                        id="receipt-turb"
-                        type="fractalNoise"
-                        baseFrequency="0.013 0.024"
-                        numOctaves={2}
-                        seed={3}
-                        result="noise"
-                      />
-                      <feDisplacementMap
-                        id="receipt-displace"
-                        in="SourceGraphic"
-                        in2="noise"
-                        scale={0}
-                        xChannelSelector="R"
-                        yChannelSelector="G"
-                      />
-                    </filter>
-                  </svg>
               </div>
             </div>
             <div className="dl-finale">

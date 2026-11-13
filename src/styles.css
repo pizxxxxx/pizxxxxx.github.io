@@ -3,6 +3,7 @@
 @theme {
   --font-sans: "Manrope Variable", "Segoe UI", sans-serif;
   --font-display: "Unbounded Variable", "Arial", sans-serif;
+  --font-lyr: "Jost Variable", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono Variable", "Cascadia Mono", Consolas, monospace;
 
   --color-bg: #07060b;
@@ -939,6 +940,7 @@
 .lyric {
   margin: 0.7rem 0;
   color: var(--lyr-dim);
+  font-family: var(--font-lyr);
   font-size: clamp(17px, 1.6vw, 22px);
   line-height: 1.4;
   font-weight: 500;
@@ -951,6 +953,14 @@
     opacity 700ms var(--ease-out),
     filter 700ms var(--ease-out),
     transform 700ms var(--ease-out);
+}
+
+/* Две шапочные строки трека (название и артист) — дисплейный Unbounded:
+   широкий футуристичный гротеск держит их как витрину, остальной текст —
+   геометричный Jost. */
+.lyric--display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 .ch {
@@ -1709,9 +1719,9 @@
   opacity: 0;
 }
 
-/* Полётом ведёт JS (page.tsx): по кадрам считает траекторию, вращение
-   и силу «мятости» через SVG-фильтр ниже. CSS держит только видимость
-   листа и еле заметное живое покачивание после посадки. */
+/* Полётом ведёт JS (page.tsx): по кадрам считает траекторию, разгон,
+   торможение и наклоны — лист не деформируется. CSS держит только
+   видимость листа и еле заметное живое покачивание после посадки. */
 .receipt.is-in {
   opacity: 1;
 }
@@ -1869,15 +1879,6 @@
   margin-top: -1px;
   color: var(--paper-raised);
   transition: color 500ms var(--ease-out);
-}
-
-/* Невидимый SVG с фильтром «мятости»: сам по себе ничего не рисует,
-   во время полёта JS дёргает scale смещения в его кадрах. */
-.r-crumple-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
 }
 
 /* Финальная строка секции цены: кнопки платформ и mono-сводка версий. */

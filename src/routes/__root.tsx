@@ -4,11 +4,22 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 // Self-hosted (OFL): no external font CDN — works offline, on Pages and
 // on networks where Google Fonts is unreachable.
 // Unbounded — дисплейный, Manrope — текст, Jost italic — выкрики-адлибы.
+// Остальные — витрина шрифтов в караоке: начертание строки «Шрифты на вкус»
+// листается по ходу скролла, ровно как выбор шрифта в приложении.
 import "@fontsource-variable/unbounded";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/jost";
 import "@fontsource-variable/jost/wght-italic.css";
 import "@fontsource-variable/jetbrains-mono";
+import "@fontsource-variable/inter";
+import "@fontsource-variable/onest";
+import "@fontsource-variable/golos-text";
+import "@fontsource-variable/playfair-display";
+import "@fontsource-variable/caveat";
+import "@fontsource-variable/comfortaa";
+import "@fontsource-variable/cormorant-garamond";
+import "@fontsource-variable/raleway";
+import "@fontsource-variable/rubik";
 import appCss from "../styles.css?url";
 
 const APP_NAME = "Lomify";

@@ -45,6 +45,24 @@ function fillSlider(el: HTMLInputElement, ratio: number) {
 const model = buildModel(tracks);
 const PLAY_SECONDS = 52;
 
+/* Витрина шрифтов строки «Шрифты на вкус»: те же двенадцать, что и в
+   выборе шрифта приложения (см. скрин раздела «Тексты»). Начертание
+   строки листается по ходу скролла — прокрутка листает список. */
+const FONT_CYCLE = [
+  "Inter Variable",
+  "Manrope Variable",
+  "Onest Variable",
+  "Golos Text Variable",
+  "Playfair Display Variable",
+  "Unbounded Variable",
+  "Caveat Variable",
+  "Comfortaa Variable",
+  "Cormorant Garamond Variable",
+  "Jost Variable",
+  "Raleway Variable",
+  "Rubik Variable",
+];
+
 /**
  * Декоративные адлибы-«выкрики» поверх обложки: междометия из трека, не строки
  * текста. at — момент появления, доля локального хода трека (0..1): выкрик
@@ -202,6 +220,7 @@ export function LyricsStage() {
           if (reducedRef.current) {
             line.classList.add(index === 0 ? "line-current" : "line-past");
             chars.forEach((ch) => ch.classList.add("on"));
+            line.style.fontFamily = "";
             return;
           }
           if (index < cursor.line) line.classList.add("line-past");
@@ -212,6 +231,19 @@ export function LyricsStage() {
             ch.classList.toggle("on", on);
             ch.classList.toggle("edge", index === cursor.line && cursor.sung > 0 && charIndex === cursor.sung - 1);
           });
+          // Строка «Шрифты на вкус»: начертание листается списком по ходу
+          // пропевания — прокрутка вверх возвращает предыдущие шрифты.
+          if (line.dataset.fontline !== undefined) {
+            if (index === cursor.line) {
+              const step = Math.min(
+                FONT_CYCLE.length - 1,
+                Math.floor((cursor.sung / Math.max(1, line.childElementCount)) * FONT_CYCLE.length),
+              );
+              line.style.fontFamily = `"${FONT_CYCLE[step]}", "Segoe UI", sans-serif`;
+            } else {
+              line.style.fontFamily = "";
+            }
+          }
         });
 
         const current = lines[cursor.line];
@@ -392,7 +424,14 @@ export function LyricsStage() {
                   <p
                     key={`${track.id}-${lineIndex}`}
                     data-line={lineIndex}
-                    className={lineIndex === 0 && trackIndex === 0 ? "lyric line-current" : "lyric line-next"}
+                    data-fontline={track.fontLine === lineIndex ? "1" : undefined}
+                    className={
+                      lineIndex === 0 && trackIndex === 0
+                        ? "lyric lyric--display line-current"
+                        : lineIndex < 2
+                          ? "lyric lyric--display line-next"
+                          : "lyric line-next"
+                    }
                     onClick={() => rewindToLine(stageRef.current, trackIndex, lineIndex)}
                   >
                     {Array.from(line).map((char, charIndex) => (
