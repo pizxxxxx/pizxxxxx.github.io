@@ -297,7 +297,7 @@ export function Landing() {
             сайт и так тёмный — с dark reader он хуже: выключи его
           </p>
           <p className="hero-corner hero-corner--tr mono">
-            open source · gpl-3.0 · v9.6.4
+            open source · gpl-3.0
           </p>
           <div className="hero-ruler mono" aria-hidden="true">
             <span>31</span>
@@ -589,7 +589,7 @@ export function Landing() {
                 </a>
               </div>
               <p className="dl-finale-meta mono">
-                LomifyNEXT v9.6.4 · APK 1.0.37 · GPL-3.0 · обновления — через GitHub Releases
+                LomifyNEXT · GPL-3.0 · обновления — через GitHub Releases
               </p>
             </div>
           </div>
