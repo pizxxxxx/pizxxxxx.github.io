@@ -5,6 +5,9 @@
   --font-display: "Unbounded Variable", "Arial", sans-serif;
   --font-lyr: "Jost Variable", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono Variable", "Cascadia Mono", Consolas, monospace;
+  /* SF Pro на технике Apple, Inter как ближайший веб-двойник на остальных. */
+  --font-apple: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont,
+    "Inter Variable", "Segoe UI", system-ui, sans-serif;
 
   --color-bg: #07060b;
   --color-bg-raised: #0c0a12;
@@ -1754,7 +1757,10 @@
   color: var(--paper-ink);
   border: 1px solid rgba(23, 20, 28, 0.08);
   border-radius: 7px 7px 4px 4px;
-  font-family: var(--font-mono);
+  font-family: var(--font-apple);
+  /* Цифры одинаковой ширины — суммы в строках стоят ровно, как в
+     настоящем чеке магазина. */
+  font-feature-settings: "tnum" 1;
   transition: background-color 500ms var(--ease-out);
 }
 
@@ -1864,7 +1870,7 @@
   width: 100%;
   background: var(--accent-on-paper);
   color: var(--paper);
-  font-family: var(--font-mono);
+  font-family: var(--font-apple);
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.14em;
