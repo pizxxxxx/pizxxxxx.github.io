@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
   AudioLines,
@@ -13,8 +13,6 @@ import {
   SlidersHorizontal,
   Smartphone,
   Waves,
-  Volume2,
-  VolumeX,
   X,
 } from "lucide-react";
 import { libraryRows, sideLinks, themes, type SkinId } from "./data";
@@ -54,299 +52,118 @@ const RECEIPT_TEAR =
 export function Landing() {
   const [open, setOpen] = useState(false);
   const [skin, setSkin] = useState<SkinId>("mister");
-  // звук плюха: включён по умолчанию, кнопка mute в углу секции
-  const [muted, setMuted] = useState(false);
-  const mutedRef = useRef(false);
 
   useEffect(() => {
     document.documentElement.dataset.skin = skin;
     document.documentElement.dataset.glass = "high";
   }, [skin]);
 
-  useEffect(() => {
-    mutedRef.current = muted;
-  }, [muted]);
-
-  // Чек падает в лужу, как только секция входит в экран: armed → falling →
-  // landed, запуск только из armed; чек целиком ушёл из вьюпорта — снова
-  // armed, при следующем появлении упадёт опять. В момент удара о воду
-  // (~62% падения) от основания чека расходятся кольца-волны и брызги,
-  // играет тихий плюх. Рисует один canvas поверх секции: кольца живут
-  // над текстом, чек — над кольцами. Клик по фону секции пускает рябь.
+  // Чек красиво прилетает из-за правого края секции, как брошенный лист:
+  // разгон, дуга с мягким торможением, лёгкий разворот к зрителю — и
+  // распластывается на месте под случайным углом. Полёт ведёт JS по
+  // кадрам. Когда чек целиком уходит из вьюпорта — сбрасывается, при
+  // следующем появлении прилетает снова. Клик по чеку ничего не ломает.
   useEffect(() => {
     const section = document.getElementById("download");
     const holder = section?.querySelector<HTMLElement>(".price-receipt");
     const receipt = section?.querySelector<HTMLElement>(".receipt");
-    const canvas = section?.querySelector<HTMLCanvasElement>(".receipt-canvas");
-    if (!section || !holder || !receipt || !canvas) return;
-    const ctx = canvas.getContext("2d");
+    if (!section || !holder || !receipt) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    type Ripple = { x: number; y: number; born: number; spread: number; dur: number; lw: number };
-    type Droplet = { x: number; y: number; vx: number; vy: number; born: number; dur: number; r: number };
-    const ripples: Ripple[] = [];
-    const droplets: Droplet[] = [];
-
     let raf = 0;
-    let running = false;
-    let state: "armed" | "falling" | "landed" = "armed";
-    let dropT0 = 0;
-    let splashed = false;
-    let restRot = 0;
-    let startRot = -2.5;
-    const DROP_MS = 700;
-    const HIT = 0.62; // удар о воду — на 62% длительности падения
+    let flying = false;
+    let timer = 0;
 
-    /* ── canvas: размер секции, DPR не выше двух ── */
-    let cssW = 0;
-    let cssH = 0;
-    let dpr = 1;
-    const fit = () => {
-      cssW = section.clientWidth;
-      cssH = section.clientHeight;
-      dpr = Math.min(2, window.devicePixelRatio || 1);
-      canvas.width = Math.max(1, Math.round(cssW * dpr));
-      canvas.height = Math.max(1, Math.round(cssH * dpr));
-    };
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(section);
-
-    /* Точка удара — от layout-бокса чека: стабильная обёртка без
-       transform, вода там, где лежит лист, в любой момент анимации. */
-    const impactPoint = () => {
-      const s = section.getBoundingClientRect();
-      const h = holder.getBoundingClientRect();
-      return { x: h.left + h.width / 2 - s.left, y: h.bottom - s.top - 2 };
-    };
-
-    /* ── звук: тихий плюх на WebAudio; пока политика автоплея молчит —
-       звук тихо пропускается до первого жеста пользователя ── */
-    let audio: AudioContext | null = null;
-    const playSplash = (vol: number) => {
-      if (mutedRef.current || reduced) return;
-      try {
-        const AC =
-          window.AudioContext ??
-          (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-        if (!AC) return;
-        if (!audio) audio = new AC();
-        if (audio.state === "suspended") void audio.resume();
-        if (audio.state !== "running") return;
-        const t = audio.currentTime + 0.01;
-        const out = audio.createGain();
-        out.connect(audio.destination);
-        // тональный плюх: провал 430 → 120 Гц
-        const osc = audio.createOscillator();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(430, t);
-        osc.frequency.exponentialRampToValueAtTime(120, t + 0.2);
-        const og = audio.createGain();
-        og.gain.setValueAtTime(0.0001, t);
-        og.gain.exponentialRampToValueAtTime(0.16 * vol, t + 0.015);
-        og.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
-        osc.connect(og).connect(out);
-        osc.start(t);
-        osc.stop(t + 0.3);
-        // короткий шумовой всплеск
-        const n = Math.floor(0.16 * audio.sampleRate);
-        const buf = audio.createBuffer(1, n, audio.sampleRate);
-        const data = buf.getChannelData(0);
-        for (let i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.2);
-        const src = audio.createBufferSource();
-        src.buffer = buf;
-        const bp = audio.createBiquadFilter();
-        bp.type = "bandpass";
-        bp.frequency.value = 1100;
-        bp.Q.value = 0.7;
-        const ng = audio.createGain();
-        ng.gain.value = 0.09 * vol;
-        src.connect(bp).connect(ng).connect(out);
-        src.start(t);
-      } catch {
-        // звук не критичен
+    const stop = () => {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+      if (timer) {
+        window.clearTimeout(timer);
+        timer = 0;
       }
     };
 
-    /* ── спавн: кольца выходят с интервалом 140мс, капли — дугой ── */
-    const spawnRings = (x: number, y: number, big: boolean) => {
-      const n = big ? 4 : 2;
-      for (let i = 0; i < n; i++) {
-        ripples.push({
-          x,
-          y,
-          born: performance.now() + i * 140,
-          spread: big ? 140 : 80,
-          dur: big ? 1600 : 1100,
-          lw: big ? 9 : 6,
-        });
-      }
-      start();
-    };
-    const spawnDroplets = (x: number, y: number) => {
-      const n = 7 + Math.floor(Math.random() * 3); // 7–9 капель
-      for (let i = 0; i < n; i++) {
-        droplets.push({
-          x: x + (Math.random() - 0.5) * 70,
-          y: y - 2,
-          vx: (Math.random() - 0.5) * 170,
-          vy: -(130 + Math.random() * 150),
-          born: performance.now(),
-          dur: 600,
-          r: 1 + Math.random() * 0.5, // 2–3px
-        });
-      }
-      start();
-    };
-
-    /* ── удар: волны + брызги + звук ── */
-    const impact = () => {
-      const { x, y } = impactPoint();
-      spawnRings(x, y, true);
-      spawnDroplets(x, y);
-      playSplash(1);
-    };
-
-    /* Падение: разгон (ease-in), удар на 62%, микро-отскок ~12px,
-       затем покой — покачивание берёт на себя класс is-rest. */
-    const advanceDrop = (now: number) => {
-      const p = Math.max(0, Math.min(1, (now - dropT0) / DROP_MS));
-      let y = 0;
-      let rot = restRot;
-      let op = 1;
-      if (p < HIT) {
-        const q = p / HIT;
-        const e = q * q; // ускорение свободного падения
-        y = -320 * (1 - e);
-        rot = startRot + (restRot - startRot) * e;
-        op = Math.min(1, p / 0.09);
-      } else {
-        const q = Math.min(1, (p - HIT) / 0.24);
-        y = -12 * Math.sin(Math.PI * q); // отскок и возврат на воду
-      }
-      if (p >= HIT && !splashed) {
-        splashed = true;
-        impact();
-      }
-      if (p >= 1) {
-        state = "landed";
-        receipt.style.willChange = "";
-        receipt.style.transform = "";
+    /* Порыв несёт лист из-за правого края на его место. */
+    const flyIn = () => {
+      if (flying) return;
+      flying = true;
+      stop();
+      receipt.classList.remove("is-rest");
+      if (reduced) {
+        flying = false;
         receipt.style.opacity = "";
+        receipt.style.transform = "";
         receipt.classList.add("is-rest");
         return;
       }
-      receipt.style.opacity = op.toFixed(3);
-      receipt.style.transform = `perspective(1100px) translateY(${y.toFixed(1)}px) rotate(${rot.toFixed(2)}deg)`;
-    };
-
-    /* Единственный rAF-цикл: ведёт падение и рисует волны, пока есть
-       что рисовать; без активных волн — спит. */
-    const loop = (now: number) => {
-      if (state === "falling") advanceDrop(now);
-      if (ctx) {
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.clearRect(0, 0, cssW, cssH);
-        const amp = 0.55; // полупрозрачные: текст читается под волнами
-        for (let i = ripples.length - 1; i >= 0; i--) {
-          const w = ripples[i];
-          const t = (now - w.born) / w.dur;
-          if (t >= 1) {
-            ripples.splice(i, 1);
-            continue;
-          }
-          if (t < 0) continue; // кольца выходят с интервалом 140мс
-          const e = 1 - Math.pow(1 - t, 3); // радиус растёт с ease-out
-          const r = w.spread * e;
-          const fade = t < 0.1 ? t / 0.1 : 1 - (t - 0.1) / 0.9;
-          // тёмная ложбина позади светлого гребня — рельеф воды
-          ctx.beginPath();
-          ctx.ellipse(w.x, w.y, r + 9, (r + 9) * 0.38, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(44, 52, 66, ${(0.45 * amp * fade).toFixed(3)})`;
-          ctx.lineWidth = Math.max(1, w.lw - 3);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.ellipse(w.x, w.y, r, r * 0.38, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(255, 255, 255, ${(0.85 * amp * fade).toFixed(3)})`;
-          ctx.lineWidth = w.lw;
-          ctx.stroke();
-        }
-        for (let i = droplets.length - 1; i >= 0; i--) {
-          const d = droplets[i];
-          const t = (now - d.born) / d.dur;
-          if (t >= 1) {
-            droplets.splice(i, 1);
-            continue;
-          }
-          const sec = (t * d.dur) / 1000;
-          const dy = d.y + d.vy * sec + 450 * sec * sec; // гравитация
-          if (dy > d.y + 5) {
-            droplets.splice(i, 1); // упала обратно в воду
-            continue;
-          }
-          ctx.beginPath();
-          ctx.arc(d.x + d.vx * sec, dy, d.r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255, 255, 255, ${(0.9 * (1 - t)).toFixed(3)})`;
-          ctx.fill();
-        }
-      }
-      if (state === "falling" || ripples.length > 0 || droplets.length > 0) {
-        raf = requestAnimationFrame(loop);
-      } else {
-        running = false;
-        raf = 0;
-      }
-    };
-    const start = () => {
-      if (running) return;
-      running = true;
-      raf = requestAnimationFrame(loop);
-    };
-
-    /* Запуск падения: свой случайный угол посадки на каждый заход. */
-    const arm = (delay: number) => {
-      state = "falling";
-      splashed = false;
-      restRot = Math.random() * 4.4 - 2.2;
-      startRot = -(2.2 + Math.random() * 1.6);
-      receipt.classList.remove("is-rest");
-      receipt.style.setProperty("--rest-rot", `${restRot.toFixed(2)}deg`);
+      // каждый заход кладёт лист под своим углом — не идеально ровно,
+      // а на пару градусов в случайную сторону, как брошенная бумага
+      const landRot = Math.random() * 4.4 - 2.2;
+      receipt.style.setProperty("--rest-rot", `${landRot.toFixed(2)}deg`);
+      void receipt.offsetWidth; // сброс состояния перед новым вылетом
+      const T = 1150;
+      const t0 = performance.now();
       receipt.style.willChange = "transform, opacity";
-      ripples.length = 0; // старые волны не тащим в новый заход
-      droplets.length = 0;
-      dropT0 = performance.now() + delay;
-      start();
+
+      const step = (now: number) => {
+        // кламп с обеих сторон: таймстемп кадра может прийти раньше t0
+        const p = Math.max(0, Math.min(1, (now - t0) / T));
+        // влёт — разгон и мягкое торможение (кубический ease-in-out)
+        const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+        const fall = Math.pow(1 - p, 1.15); // порывы затихают к посадке
+        // ниже цели, дуга вверх на разгоне и мягкий спуск на посадку
+        const x = 112 * (1 - e);
+        const y = 6 * Math.pow(1 - e, 1.1) - 3.4 * Math.sin(Math.PI * p) * Math.pow(1 - p, 0.75);
+        // финальный наклон — случайный угол посадки, а не ровный ноль
+        const rot =
+          landRot * e + 7.5 * Math.pow(1 - e, 1.2) + 2.6 * Math.sin(Math.PI * 2.3 * p) * fall;
+        const ry = -7 * (1 - e); // лёгкий разворот к зрителю выпрямляется к посадке
+        const sc = 1 + 0.025 * (1 - e);
+
+        receipt.style.opacity = "1";
+        receipt.style.transform =
+          `perspective(1100px) translate(${x.toFixed(2)}vw, ${y.toFixed(2)}vh) rotate(${rot.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) scale(${sc.toFixed(3)})`;
+
+        if (p < 1) {
+          raf = requestAnimationFrame(step);
+          return;
+        }
+        // лист распластан: ровно, с еле заметным живым покачиванием
+        raf = 0;
+        flying = false;
+        receipt.style.willChange = "";
+        receipt.style.transform = "";
+        receipt.style.opacity = "1";
+        receipt.classList.add("is-rest");
+      };
+      raf = requestAnimationFrame(step);
     };
 
-    /* reduced motion: без падения и брызг — чек просто появляется,
-       кольца проявляются и гаснут. */
-    const showReduced = () => {
-      receipt.style.opacity = "1";
-      receipt.style.transform = "";
-      const { x, y } = impactPoint();
-      spawnRings(x, y, true);
-    };
-
-    /* Наблюдение за обёрткой чека: порог 0.4 — чек виден на 40%. */
+    /* Наблюдение за стабильной обёрткой чека: порог 0.4 — чек виден
+       на 40%. Сам чек не наблюдаем: во время полёта его transform
+       уносит бокс за край, и наблюдение сорвалось бы. */
     const ioStart = performance.now();
     const io = new IntersectionObserver(
       (entries) => {
         for (const en of entries) {
-          if (en.intersectionRatio >= 0.4 && state === "armed") {
+          if (en.intersectionRatio >= 0.4) {
             // секция уже на экране при загрузке — пауза на entrance;
-            // при скролле падение стартует сразу
-            const delay = performance.now() - ioStart < 300 ? 220 : 0;
-            if (reduced) showReduced();
-            else arm(delay);
+            // при скролле прилетает сразу
+            const delay = performance.now() - ioStart < 300 ? 240 : 0;
+            if (delay > 0) {
+              stop();
+              timer = window.setTimeout(flyIn, delay);
+            } else flyIn();
           } else if (!en.isIntersecting) {
-            // чек целиком ушёл из вьюпорта — снова armed
-            state = "armed";
+            // чек целиком ушёл из вьюпорта — сброс до следующего захода
+            stop();
+            flying = false;
             receipt.classList.remove("is-rest");
             receipt.style.willChange = "";
             receipt.style.opacity = "";
             receipt.style.transform = "";
-            ripples.length = 0;
-            droplets.length = 0;
           }
         }
       },
@@ -354,24 +171,9 @@ export function Landing() {
     );
     io.observe(holder);
 
-    /* Клик по фону секции — маленькая рябь и тихий плюх; чек, кнопка
-       звука и ссылки — не триггер. */
-    const onSceneClick = (e: MouseEvent) => {
-      const t = e.target as HTMLElement | null;
-      if (t && t.closest(".receipt, .pool-mute, a, button")) return;
-      const s = section.getBoundingClientRect();
-      spawnRings(e.clientX - s.left, e.clientY - s.top, false);
-      playSplash(0.55);
-    };
-    section.addEventListener("click", onSceneClick);
-
     return () => {
-      if (raf) cancelAnimationFrame(raf);
-      running = false;
-      ro.disconnect();
+      stop();
       io.disconnect();
-      section.removeEventListener("click", onSceneClick);
-      if (audio) void audio.close().catch(() => {});
     };
   }, []);
 
@@ -674,19 +476,6 @@ export function Landing() {
         </section>
 
         <section className="section sec--paper sec--price" id="download">
-          {/* Сцена «лужа»: canvas с волнами лежит поверх текста и под чеком
-              (слои: фон → текст → canvas → чек), плюс кнопка звука плюха.
-              Рисует и ведёт всё движок чека в useEffect выше. */}
-          <canvas className="receipt-canvas" aria-hidden="true" />
-          <button
-            type="button"
-            className="pool-mute mono"
-            onClick={() => setMuted((m) => !m)}
-            aria-pressed={muted}
-          >
-            {muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
-            {muted ? "звук выкл" : "звук вкл"}
-          </button>
           <div className="section-inner">
             <div className="price-grid">
               <div className="price-copy">
@@ -718,9 +507,6 @@ export function Landing() {
                 </p>
               </div>
               <div className="price-receipt">
-                {/* Лужа под чеком: стабильный layout-слой без transform —
-                    от него движок считает точку удара. */}
-                <i className="receipt-pool" aria-hidden="true" />
                 <div className="receipt">
                   <div className="receipt-sheet">
                     <p className="r-brand">LOMIFY·STORE</p>

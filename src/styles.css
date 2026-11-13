@@ -1647,66 +1647,11 @@
 }
 
 /* ── Цена: бумажный блок с кассовым чеком ─────────────────────────────
-   Слева — копия и гигантский «0 ₽», справа чек: падает в лужу, когда
-   секция входит в экран, от удара расходятся кольца-волны и брызги
-   (canvas поверх текста, чек — над волнами). Секция клипает перелив:
-   ни падение, ни брызги не создают скроллбар. */
+   Слева — копия и гигантский «0 ₽», справа чек: красиво прилетает
+   из-за правого края, когда секция входит в экран. Секция клипает
+   горизонталь: полёт не создаёт скроллбар. */
 .sec--price {
-  overflow: clip;
-}
-
-/* Сцена «лужа»: canvas на всю секцию между текстом (под ним) и чеком
-   (над ним), сам ничего не ловит — клики уходят секции. */
-.receipt-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
-  pointer-events: none;
-}
-
-/* Лужа: едва заметный тёмный эллипс с бликом прямо под чеком — «вода»,
-   в которую падает лист. Живёт в стабильной обёртке, не анимируется. */
-.receipt-pool {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  z-index: 1;
-  width: calc(100% + 56px);
-  height: 64px;
-  transform: translate(-50%, 42%);
-  border-radius: 50%;
-  background:
-    radial-gradient(38% 30% at 30% 24%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 70%),
-    radial-gradient(50% 46% at 50% 50%, rgba(23, 20, 28, 0.12), rgba(23, 20, 28, 0) 72%);
-  pointer-events: none;
-}
-
-/* Кнопка звука плюха: маленькая, в углу бумажной секции. */
-.pool-mute {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 45;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--paper-line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--paper-muted);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    color 160ms var(--ease-out),
-    border-color 160ms var(--ease-out);
-}
-
-.pool-mute:hover {
-  color: var(--paper-ink);
-  border-color: var(--paper-ink);
+  overflow-x: clip;
 }
 
 .price-grid {
@@ -1716,7 +1661,6 @@
 }
 
 .price-receipt {
-  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1766,35 +1710,31 @@
 
 .receipt {
   position: relative;
-  z-index: 40; /* выше canvas с волнами: чек всегда поверх воды */
+  z-index: 2;
   width: min(400px, 100%);
   margin-inline: auto;
   transform-origin: 50% 50%;
   filter: drop-shadow(0 34px 44px rgba(23, 20, 28, 0.38)) drop-shadow(0 8px 12px rgba(23, 20, 28, 0.2));
-  /* Пока armed, лист прозрачен; падение и удар ведёт JS-движок. */
+  /* До старта полёта лист прозрачен; кадры полёта красит JS-движок. */
   opacity: 0;
 }
 
-/* Падением ведёт JS (page.tsx): по кадрам считает разгон, удар,
-   отскок и наклоны. CSS держит видимость листа и покой на воде. */
+/* Полётом ведёт JS (page.tsx): по кадрам считает траекторию, разгон,
+   торможение и наклоны — лист не деформируется. CSS держит только
+   видимость листа и еле заметное живое покачивание после посадки. */
 
 .receipt.is-rest {
-  animation: receipt-bob 5.5s ease-in-out infinite;
+  animation: receipt-sway 5.5s ease-in-out infinite alternate;
 }
 
-/* Покой на воде: лист слегка покачивается — ±4px по вертикали с еле
-   заметным креном вокруг своего случайного угла посадки (--rest-rot
-   ставит JS на каждый заход). */
-@keyframes receipt-bob {
-  0%,
-  100% {
-    transform: perspective(1100px) rotate(var(--rest-rot, 0deg)) translateY(1px);
+/* Лист дышит вокруг того угла, под который лёг: --rest-rot ставит JS
+   (случайные пара градусов на каждый порыв), покачивание — поверх него. */
+@keyframes receipt-sway {
+  from {
+    transform: perspective(1100px) rotate(calc(var(--rest-rot, 0deg) + 0.45deg));
   }
-  50% {
-    transform: perspective(1100px) rotate(calc(var(--rest-rot, 0deg) - 0.35deg)) translateY(-4px);
-  }
-  70% {
-    transform: perspective(1100px) rotate(calc(var(--rest-rot, 0deg) + 0.18deg)) translateY(3px);
+  to {
+    transform: perspective(1100px) rotate(calc(var(--rest-rot, 0deg) - 0.45deg));
   }
 }
 
