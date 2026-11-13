@@ -68,12 +68,57 @@ export function Landing() {
     if (!receipt || !section) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let raf = 0;
+    let waveRaf = 0;
+    const waveMap = document.querySelector<SVGElement>("#receipt-wave-map");
 
     const stop = () => {
       if (raf) {
         cancelAnimationFrame(raf);
         raf = 0;
       }
+    };
+
+    /* Волна от посадки: по бумаге от точки падения расходятся кольца
+       (как по воде, прозрачно), а SVG-фильтр тем временем качает всю
+       сетку секции — текст плывёт под волной. Кольца живут поверх
+       текста и гаснут сами; фильтр затухает двумя толчками. */
+    const land = () => {
+      if (reduced) return;
+      const s = section.getBoundingClientRect();
+      const r = receipt.getBoundingClientRect();
+      const x = r.left + r.width * 0.55 - s.left;
+      const y = r.bottom - s.top - 6;
+      for (let i = 0; i < 3; i++) {
+        const ring = document.createElement("i");
+        ring.className = "r-ripple";
+        ring.style.left = `${Math.round(x)}px`;
+        ring.style.top = `${Math.round(y)}px`;
+        ring.style.animationDelay = `${i * 140}ms`;
+        section.appendChild(ring);
+        // страховка: даже если animationend потеряется, кольцо уберётся
+        ring.addEventListener("animationend", () => ring.remove(), { once: true });
+        window.setTimeout(() => ring.remove(), 1700 + i * 140);
+      }
+      if (!waveMap) return;
+      if (waveRaf) cancelAnimationFrame(waveRaf);
+      section.classList.add("is-waving");
+      const t0 = performance.now();
+      const TW = 1050;
+      const tick = (now: number) => {
+        const p = Math.max(0, Math.min(1, (now - t0) / TW));
+        // два толчка: удар и слабое отражение — волна затихает к нулю
+        const a1 = 11 * Math.exp(-Math.pow((p - 0.16) / 0.085, 2));
+        const a2 = 5 * Math.exp(-Math.pow((p - 0.55) / 0.13, 2));
+        waveMap.setAttribute("scale", (a1 + a2).toFixed(2));
+        if (p < 1) {
+          waveRaf = requestAnimationFrame(tick);
+          return;
+        }
+        waveMap.setAttribute("scale", "0");
+        section.classList.remove("is-waving");
+        waveRaf = 0;
+      };
+      waveRaf = requestAnimationFrame(tick);
     };
 
     /* dir 1 — порыв несёт лист из-за правого края на его место;
@@ -97,7 +142,8 @@ export function Landing() {
         receipt.style.setProperty("--rest-rot", `${landRot.toFixed(2)}deg`);
       }
       receipt.classList.add(dir === 1 ? "is-in" : "is-out");
-      const T = dir === 1 ? 1700 : 1150;
+      // быстрее прежнего: влёт короче, унос — тем более
+      const T = dir === 1 ? 1150 : 780;
       const t0 = performance.now();
       receipt.style.willChange = "transform, opacity";
 
@@ -147,6 +193,7 @@ export function Landing() {
           // лист распластан: ровно, с еле заметным живым покачиванием
           receipt.style.opacity = "1";
           receipt.classList.add("is-rest");
+          land(); // от точки падения расходится волна по воде
         } else {
           // унесён за край: прозрачен до следующего порыва
           receipt.style.opacity = "0";
@@ -215,6 +262,11 @@ export function Landing() {
     return () => {
       stop();
       if (frame) cancelAnimationFrame(frame);
+      if (waveRaf) {
+        cancelAnimationFrame(waveRaf);
+        section.classList.remove("is-waving");
+        waveMap?.setAttribute("scale", "0");
+      }
       io.disconnect();
       window.removeEventListener("scroll", onScroll);
     };
@@ -519,6 +571,28 @@ export function Landing() {
         </section>
 
         <section className="section sec--paper sec--price" id="download">
+          {/* Волна от падения чека: невидимый SVG-фильтр смещения; во время
+              волны JS дёргает его scale по кадрам — вся сетка секции
+              (текст, цены, кнопки и сам лист) плывёт, как под водой. */}
+          <svg className="r-ripple-defs" aria-hidden="true" focusable="false">
+            <filter id="receipt-wave" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="0.011 0.024"
+                numOctaves={2}
+                seed={7}
+                result="noise"
+              />
+              <feDisplacementMap
+                id="receipt-wave-map"
+                in="SourceGraphic"
+                in2="noise"
+                scale={0}
+                xChannelSelector="R"
+                yChannelSelector="G"
+              />
+            </filter>
+          </svg>
           <div className="section-inner">
             <div className="price-grid">
               <div className="price-copy">
