@@ -359,8 +359,9 @@ export function Landing() {
                 <aside className="app-side">
                   {sideLinks.map((label, index) => {
                     const Icon = sideIcons[index];
+                    // подсвечены «Любимые» — витрина плеера стоит на ней
                     return (
-                      <div key={label} className={index === 3 ? "side-link is-on" : "side-link"}>
+                      <div key={label} className={index === 4 ? "side-link is-on" : "side-link"}>
                         <Icon size={14} />
                         {label}
                       </div>
