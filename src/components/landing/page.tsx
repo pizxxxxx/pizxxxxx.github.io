@@ -391,6 +391,9 @@ export function Landing() {
                 держит выбранную палитру. Нажми стиль — страница переоденется.
               </p>
             </div>
+            {/* Подпись над первым рядом тем — тем же тоном, что подписи
+                карточек: тихая, строчными. */}
+            <p className="theme-note" aria-hidden="true">ну почти тёмный</p>
             <div className="theme-grid" role="group" aria-label="Стиль оформления">
               {themes.map((theme) => (
                 <button

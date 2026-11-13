@@ -1391,10 +1391,22 @@
 }
 .sec--paper .theme-card p { color: var(--paper-muted); }
 
+/* Строчная подпись над первым рядом тем — в стиле угловых надписей
+   героя (та, что про dark reader): mono, мелкая, разрядка, капсом. */
+.theme-note {
+  margin: 1.7rem 0 0;
+  color: var(--color-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .theme-grid {
   display: grid;
   gap: 0.8rem;
-  margin-top: 1.6rem;
+  margin-top: 0.65rem;
   grid-auto-rows: 1fr;
 }
 
