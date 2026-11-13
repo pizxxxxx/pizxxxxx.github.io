@@ -26,6 +26,9 @@ import { WaveCanvas } from "./wave-canvas";
 const WIN_DL = "/download.html?app=desktop";
 const APK_DL = "/download.html?app=mobile";
 const SOURCE = "https://github.com/pizxxxxx/LomifyNEXT";
+// ЮMoney — та же ссылка, что в настройках плеера (перевод на кошелёк):
+// чек на сайте нулевой, но поблагодарить автора можно отдельно.
+const YOOMONEY = "https://yoomoney.ru/to/4100116984624656";
 
 const sideIcons = [Library, Search, Waves, AudioLines, Heart];
 
@@ -536,6 +539,12 @@ export function Landing() {
                     <path d={RECEIPT_TEAR} fill="currentColor" />
                   </svg>
                 </div>
+                {/* Чаевые: чек нулевой, но поблагодарить можно. */}
+                <p className="r-tips-note">чек — 0 ₽, но есть чаевые</p>
+                <a className="r-tips" href={YOOMONEY} target="_blank" rel="noreferrer">
+                  <Heart size={13} />
+                  чаевые
+                </a>
               </div>
             </div>
             <div className="dl-finale">
