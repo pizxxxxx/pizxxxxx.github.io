@@ -43,46 +43,76 @@
   // ?app=mobile ведёт на LomifyNEXT-Mobile (apk), иначе — десктопный exe.
   const mobile = new URLSearchParams(location.search).get("app") === "mobile";
   const repo = mobile ? "pizxxxxx/LomifyNEXT-Mobile" : "pizxxxxx/LomifyNEXT";
-  const page = "https://github.com/" + repo + "/releases/latest";
-  // Второй шанс, когда API недоступен: прямой адрес ассета последнего релиза.
-  // github.com может работать, даже когда api.github.com нет. Имя содержит
-  // версию — при новом релизе обнови эту строку (desktop 9.6.4 / mobile 1.0.37).
-  const directAsset = mobile
-    ? "https://github.com/" + repo + "/releases/latest/download/LomifyNEXT-1.0.37-arm64.apk"
-    : "https://github.com/" + repo + "/releases/latest/download/LomifyNEXT_9.6.4_x64-setup.exe";
+  const releasesPage = "https://github.com/" + repo + "/releases/latest";
   const status = document.getElementById("status");
   const manual = document.getElementById("manual");
-  manual.href = page;
+  manual.href = releasesPage;
 
   // Приоритет ассетов: точное имя → общий суффикс → любой подходящий файл.
+  // Ищем по суффиксам, не по номеру версии: выложил новый релиз — сайт сам
+  // подхватит новое имя файла, обновлять ничего не нужно.
   const rules = mobile
     ? [(a) => /arm64\.apk$/i.test(a.name), (a) => /\.apk$/i.test(a.name)]
     : [(a) => /x64-setup\.exe$/i.test(a.name), (a) => /setup\.exe$/i.test(a.name), (a) => /\.exe$/i.test(a.name)];
 
-  try {
-    const signal = typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(9000) : undefined;
-    const res = await fetch("https://api.github.com/repos/" + repo + "/releases/latest", {
-      headers: { Accept: "application/vnd.github+json" },
-      signal,
-    });
-    if (!res.ok) throw new Error(String(res.status));
-    const rel = await res.json();
-    let url = null;
-    for (const rule of rules) {
-      const hit = (rel.assets || []).find(rule);
-      if (hit) { url = hit.browser_download_url; break; }
+  // Сигнал отмены — свой на каждый запрос: переиспользованный после таймаута
+  // signal мгновенно оборвал бы следующий источник.
+  const timeout = () =>
+    typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(9000) : undefined;
+
+  /* Зеркало отдаёт ассеты без полей name и browser_download_url: имя файла
+     сидит в конце downloadUrl. Привожу оба формата к одному виду. */
+  const normalize = (assets) =>
+    (assets || []).map((a) => ({
+      name: a.name || String(a.downloadUrl || a.browser_download_url || "").split("/").pop(),
+      url: a.browser_download_url || a.downloadUrl,
+    }));
+
+  /* Два источника списка файлов последнего релиза — оба смотрят на живые
+     данные GitHub и оба отдают CORS-ответы, ни один не хранит номер версии:
+     1) api.github.com — официальный API;
+     2) ungh.cc — открытое зеркало GitHub API со своими лимитами: выручает,
+        когда официальный упёрся в rate limit или недоступен. */
+  const sources = [
+    async () => {
+      const res = await fetch("https://api.github.com/repos/" + repo + "/releases/latest", {
+        headers: { Accept: "application/vnd.github+json" },
+        signal: timeout(),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const rel = await res.json();
+      return normalize(rel.assets);
+    },
+    async () => {
+      const res = await fetch("https://ungh.cc/repos/" + repo + "/releases/latest", { signal: timeout() });
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      if (!data || !data.release) throw new Error("no release");
+      return normalize(data.release.assets);
+    },
+  ];
+
+  for (const source of sources) {
+    try {
+      const assets = await source();
+      let url = null;
+      for (const rule of rules) {
+        const hit = assets.find(rule);
+        if (hit) { url = hit.url; break; }
+      }
+      if (!url) throw new Error("no asset");
+      status.textContent = "начинаем скачивание…";
+      location.replace(url);
+      return;
+    } catch (e) {
+      // источник не ответил или не нашёл файл — пробуем следующий
     }
-    if (!url) throw new Error("no asset");
-    status.textContent = "начинаем скачивание…";
-    location.replace(url);
-  } catch (e) {
-    // API недоступен (сеть, лимит) — идём на прямой адрес ассета: это обычная
-    // навигация, CORS не мешает, и github.com может работать, даже когда
-    // api.github.com нет. Если имя устарело (вышел новый релиз) — GitHub
-    // покажет свою 404, оттуда один клик до страницы релизов.
-    status.textContent = "api недоступен — качаем последний релиз напрямую…";
-    location.replace(directAsset);
   }
+
+  // Оба источника недоступны — открываю страницу релизов: там всегда лежит
+  // самый свежий установщик, до файла останется один клик.
+  status.textContent = "не вышло — открываю страницу релизов…";
+  location.replace(releasesPage);
 })();
 </script>
 </body>
