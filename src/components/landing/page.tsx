@@ -78,6 +78,7 @@ export function Landing() {
 
     /* dir 1 — порыв несёт лист из-за правого края на его место;
        dir -1 — обратный: ветер отлепляет лист и уносит за край. */
+    let restRot = 0; // угол, под которым лист лёг в последний раз
     const fly = (dir: 1 | -1) => {
       stop();
       receipt.classList.remove("is-in", "is-out", "is-rest");
@@ -88,6 +89,13 @@ export function Landing() {
         return;
       }
       void receipt.offsetWidth;
+      // каждый порыв кладёт лист под своим углом: не идеально ровно, а
+      // на пару градусов в случайную сторону — как брошенная бумага
+      const landRot = Math.random() * 4.4 - 2.2;
+      if (dir === 1) {
+        restRot = landRot;
+        receipt.style.setProperty("--rest-rot", `${landRot.toFixed(2)}deg`);
+      }
       receipt.classList.add(dir === 1 ? "is-in" : "is-out");
       const T = dir === 1 ? 1700 : 1150;
       const t0 = performance.now();
@@ -111,13 +119,15 @@ export function Landing() {
           x = 112 * (1 - e);
           // ниже цели, дуга вверх на разгоне и мягкий спуск на посадку
           y = 6 * Math.pow(1 - e, 1.1) - 3.4 * Math.sin(Math.PI * p) * Math.pow(1 - p, 0.75);
-          rot = 7.5 * Math.pow(1 - e, 1.2) + 2.6 * Math.sin(Math.PI * 2.3 * p) * fall;
+          // финальный наклон — случайный угол посадки, а не ровный ноль
+          rot = landRot * e + 7.5 * Math.pow(1 - e, 1.2) + 2.6 * Math.sin(Math.PI * 2.3 * p) * fall;
           ry = -7 * (1 - e); // лёгкий разворот к зрителю выпрямляется к посадке
           sc = 1 + 0.025 * (1 - e);
         } else {
           x = 116 * e - 1.2 * Math.sin(Math.PI * p) * (1 - e);
           y = -2.6 * Math.sin(Math.PI * 1.1 * p) * (1 - e * 0.7);
-          rot = 3.5 * Math.sin(Math.PI * 1.6 * p) + 14 * e;
+          // отлепляется с того угла, под которым лежал, и уходит вправо
+          rot = restRot * (1 - Math.min(1, p * 3)) + 3.5 * Math.sin(Math.PI * 1.6 * p) + 14 * e;
           ry = 8 * e;
           sc = 1 - 0.015 * e;
           opacity = p > 0.85 ? (1 - p) / 0.15 : 1;

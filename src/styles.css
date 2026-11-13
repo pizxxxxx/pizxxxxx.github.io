@@ -1730,12 +1730,14 @@
   animation: receipt-sway 5.5s ease-in-out infinite alternate;
 }
 
+/* Лист дышит вокруг того угла, под который лёг: --rest-rot ставит JS
+   (случайные пара градусов на каждый порыв), покачивание — поверх него. */
 @keyframes receipt-sway {
   from {
-    transform: perspective(1100px) rotate(0.45deg);
+    transform: perspective(1100px) rotate(calc(var(--rest-rot, 0deg) + 0.45deg));
   }
   to {
-    transform: perspective(1100px) rotate(-0.45deg);
+    transform: perspective(1100px) rotate(calc(var(--rest-rot, 0deg) - 0.45deg));
   }
 }
 
