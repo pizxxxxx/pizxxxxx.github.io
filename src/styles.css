@@ -1234,17 +1234,22 @@
 
 .icon-btn[aria-pressed="true"] { color: var(--color-accent); }
 
-/* Кнопка play — плоский акцентный круг с залитым глифом. */
+/* Кнопка play — как в референсе плеера: крупный белый глиф без
+   оранжевой заливки; пока текст играет, глиф подсвечен акцентом. */
 .icon-btn.play-btn {
   width: 44px;
   height: 44px;
   flex: none;
-  background: var(--color-hot);
-  color: var(--color-hot-ink);
+  background: transparent;
+  color: var(--color-fg);
 }
 
 .icon-btn.play-btn:hover {
-  background: color-mix(in oklab, var(--color-hot) 88%, black);
+  background: color-mix(in oklab, var(--color-fg) 8%, transparent);
+}
+
+.is-playing .icon-btn.play-btn {
+  color: var(--color-accent);
 }
 
 .seek,

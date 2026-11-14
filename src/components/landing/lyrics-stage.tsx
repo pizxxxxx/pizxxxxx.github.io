@@ -331,12 +331,40 @@ export function LyricsStage() {
     const stop = () => {
       playingRef.current = false;
       setPlaying(false);
+      // На телефоне после паузы текст остаётся на позиции Play, пока
+      // пользователь не смахнёт сам.
+      if (!autoScroll) followPaused = true;
       if (frame) cancelAnimationFrame(frame);
     };
 
     // На телефоне Play не уводит страницу сам: караоке едет по времени,
     // экран остаётся на месте; ручной скролл по-прежнему перебивает.
     const autoScroll = !window.matchMedia("(max-width: 719px)").matches;
+
+    // На тач-экранах сцену листают свайпами: инерция флинга даёт рывки
+    // по буквам. Ведём сглаженный прогресс — нарисованный догоняет целевой
+    // за несколько кадров. На десктопе с колесиком остаётся прямая
+    // привязка: там она и так плавная.
+    const touchScroll =
+      (window.matchMedia("(pointer: coarse)").matches ||
+        new URLSearchParams(window.location.search).has("qa-touch")) &&
+      !reducedRef.current;
+    let painted = 0;
+    let followPaused = false;
+    let followFrame = 0;
+
+    const follow = () => {
+      followFrame = requestAnimationFrame(follow);
+      if (!touchScroll || playingRef.current || followPaused) return;
+      const target = progressFrom(stage, sticky);
+      const prev = painted;
+      painted += (target - painted) * 0.2;
+      if (Math.abs(target - painted) < 0.0008) painted = target;
+      if (painted === prev) return;
+      progressRef.current = painted;
+      paint(painted);
+      updateFrame();
+    };
 
     const tick = (now: number) => {
       if (!playingRef.current) return;
@@ -347,6 +375,7 @@ export function LyricsStage() {
         scrollToProgress(next);
       } else {
         driveAt.current = performance.now();
+        followPaused = true; // Play ведёт текст сам — сглаживание ждёт
         paint(next);
         updateFrame();
       }
@@ -359,6 +388,14 @@ export function LyricsStage() {
 
     const onScroll = () => {
       if (playingRef.current && performance.now() - driveAt.current > 180) stop();
+      if (touchScroll) {
+        // Свайп освобождает сглаживание: продолжаем с текущей позиции.
+        if (followPaused) {
+          followPaused = false;
+          painted = progressRef.current;
+        }
+        return;
+      }
       paint(progressFrom(stage, sticky));
       updateFrame();
     };
@@ -368,12 +405,15 @@ export function LyricsStage() {
       scrollToProgress(value);
     };
 
-    paint(progressFrom(stage, sticky));
+    painted = progressFrom(stage, sticky);
+    progressRef.current = painted;
+    paint(painted);
     updateFrame();
     document.fonts?.ready.then(() => paint(progressRef.current)).catch(() => undefined);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     rangeRef.current?.addEventListener("input", onRange);
+    follow();
 
     const api: LyricApi = {
       scrollToProgress,
@@ -390,6 +430,7 @@ export function LyricsStage() {
       window.removeEventListener("resize", onScroll);
       rangeRef.current?.removeEventListener("input", onRange);
       if (frame) cancelAnimationFrame(frame);
+      cancelAnimationFrame(followFrame);
       playingRef.current = false;
     };
   }, []);
