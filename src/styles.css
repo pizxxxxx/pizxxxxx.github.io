@@ -1130,14 +1130,11 @@
 .t-src {
   display: inline-flex;
   flex: 0 0 auto;
-  margin-left: auto;
   opacity: 0;
   transition: opacity 240ms var(--ease-out);
 }
 
 .t-src.is-on { opacity: 1; }
-
-.t-src + .t-src { margin-left: 0; }
 
 .t-share {
   display: inline-flex;
