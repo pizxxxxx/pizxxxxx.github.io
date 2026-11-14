@@ -318,7 +318,12 @@ export function LyricsStage() {
     const scrollToProgress = (progress: number) => {
       const total = stage.offsetHeight - sticky.offsetHeight;
       driveAt.current = performance.now();
-      window.scrollTo(0, stage.offsetTop + progress * Math.max(0, total));
+      // «instant»: CSS scroll-behavior: smooth не должен анимировать
+      // служебные прокрутки сцены — они кадровые.
+      window.scrollTo({
+        top: stage.offsetTop + progress * Math.max(0, total),
+        behavior: "instant",
+      });
       paint(progress);
       updateFrame();
     };
@@ -552,11 +557,13 @@ export function LyricsStage() {
                   <b ref={titleRef}>de jure</b>
                   <small ref={artistRef}>королевский XVII</small>
                 </div>
-                <span className="t-src is-on" data-src="dejure" aria-hidden="true">
-                  <YandexMusicIcon />
-                </span>
-                <span className="t-src" data-src="cupsize" aria-hidden="true">
-                  <SoundCloudIcon />
+                <span className="t-src-slot" aria-hidden="true">
+                  <span className="t-src is-on" data-src="dejure">
+                    <YandexMusicIcon />
+                  </span>
+                  <span className="t-src" data-src="cupsize">
+                    <SoundCloudIcon />
+                  </span>
                 </span>
                 <button
                   type="button"
