@@ -351,7 +351,14 @@
   background: color-mix(in oklab, #0c0a12 88%, transparent);
   backdrop-filter: blur(20px) saturate(1.4);
   box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.7);
-  animation: rise 360ms var(--ease-out) backwards;
+  /* Своя анимация: rise затирал бы translateX(-50%) на время проигрывания
+     и панель прыгала от центра вправо-обратно. */
+  animation: panel-rise 360ms var(--ease-out) backwards;
+}
+
+@keyframes panel-rise {
+  from { opacity: 0; transform: translateX(-50%) translateY(18px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 .menu-panel a {
@@ -1116,6 +1123,43 @@
 .transport-meta b { font-size: 13px; font-weight: 500; color: var(--color-fg); }
 .transport-meta small { color: var(--color-dim); font-size: 12px; }
 .transport-meta div { min-width: 0; }
+
+/* Значок площадки у трека (Я.Музыка / SoundCloud): виден у активного
+   трека, перещёлкивается вместе с обложкой и подписью. Справа — кнопка
+   «поделиться»: копирует адрес сайта, значок мигает галочкой. */
+.t-src {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 240ms var(--ease-out);
+}
+
+.t-src.is-on { opacity: 1; }
+
+.t-src + .t-src { margin-left: 0; }
+
+.t-share {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out);
+}
+
+.t-share:hover {
+  color: var(--color-fg);
+  background: color-mix(in oklab, var(--color-fg) 8%, transparent);
+}
+
+.t-share.is-copied { color: var(--color-fg); }
 
 .transport-extra { display: none; }
 
@@ -2014,18 +2058,50 @@
 @media (max-width: 719px) {
   .hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hero-ruler { margin-bottom: 2rem; }
-  .cover-wrap { width: min(60vw, 15rem); }
   /* На узком экране углы hero наезжают на линейку эквалайзера — прячем. */
   .hero-corner { display: none; }
+  /* Кнопка «Скачать» в шапке — только значок: с текстом она теснит логотип. */
+  .nav-cta {
+    min-height: 40px;
+    padding: 0 12px;
+  }
+  .nav-cta-text { display: none; }
   /* Караоке-сцена короче: пять экранов липкого скролла на телефоне —
      перебор; прогресс тот же, просто проходит быстрее. */
   .lyric-stage { height: 300vh; }
+  /* Воздух между кромкой окна сцены и обложкой: на телефоне колонка
+     сцены натягивается на окно целиком, поэтому обложке нужен свой
+     паддинг сверху — иначе она прилипает к кромке. */
+  .stage-grid { padding-top: 16px; }
+  .cover-wrap { width: min(60vw, 15rem); }
   /* Ссылкам-«кнопкам» добавляем воздух под палец. */
   .sec-link {
     display: inline-flex;
     align-items: center;
     gap: 6px;
     padding: 8px 2px;
+  }
+  /* Темы: на телефоне карточки в два столбца и компактнее — в одну
+     колонку каждая съедает весь экран. */
+  .theme-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+  }
+  .theme-card {
+    padding: 0.55rem;
+    border-radius: 1rem;
+  }
+  .theme-preview {
+    height: 4.4rem;
+    border-radius: 0.7rem;
+    padding: 0.5rem 0.6rem 0.55rem;
+  }
+  .theme-card h3 {
+    margin: 0.55rem 0 0.1rem;
+    font-size: 0.95rem;
+  }
+  .theme-card p {
+    font-size: 0.78rem;
   }
 }
 

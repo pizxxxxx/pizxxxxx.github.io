@@ -8,13 +8,13 @@ import {
   Heart,
   Keyboard,
   Library,
-  Menu,
   Search,
   SlidersHorizontal,
   Smartphone,
   Waves,
-  X,
 } from "lucide-react";
+import { MorphIcon } from "morphicons/react";
+import { Menu as MenuData, X as XData } from "lucide";
 import { libraryRows, sideLinks, themes, type SkinId } from "./data";
 import { LyricsStage } from "./lyrics-stage";
 import { WaveCanvas } from "./wave-canvas";
@@ -234,9 +234,9 @@ export function Landing() {
           <a href="#download">Скачать</a>
         </nav>
         <div className="nav-actions">
-          <a className="btn btn-primary" href={WIN_DL}>
+          <a className="btn btn-primary nav-cta" href={WIN_DL}>
             <Download size={16} />
-            Скачать
+            <span className="nav-cta-text">Скачать</span>
           </a>
           <button
             type="button"
@@ -245,7 +245,7 @@ export function Landing() {
             aria-expanded={open}
             onClick={() => setOpen((value) => !value)}
           >
-            {open ? <X size={18} /> : <Menu size={18} />}
+            <MorphIcon icon={open ? XData : MenuData} size={18} reducedMotion="user" />
           </button>
         </div>
       </header>

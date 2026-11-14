@@ -2,37 +2,45 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   AudioLines,
   Headphones,
-  Heart,
-  ListMusic,
   Maximize2,
   Repeat,
   Shuffle,
   SkipBack,
   SkipForward,
   Star,
-  Sun,
   Volume2,
 } from "lucide-react";
+import { MorphIcon } from "morphicons/react";
+import { Check, Eye, EyeOff, Heart as HeartData, Pause, Play, Share2 } from "lucide";
 import { buildModel, cursorAt, formatClock, tracks, type LyricCursor } from "./data";
 
-/* Глифы транспорта: залитые, с оптической центровкой (у треугольника центр
-   масс левее рамки — сдвигаю его вправо на пару процентов). */
-function PlayGlyph() {
+/* Залитое сердце для морфа «нравится»: тот же путь lucide, но с заливкой —
+   контур и полный глиф перетекают друг в друга. */
+const HEART_FILL = HeartData.map(
+  ([tag, attrs]) => [tag, { ...attrs, fill: "currentColor" }] as [string, typeof attrs],
+);
+
+/* Значки площадок у трека: официальные глифы без подложки — de jure едет
+   с Яндекс Музыки, «ты любишь танцевать» с SoundCloud. Смена трека
+   перещёлкивает значок, как обложку и подпись. */
+function YandexMusicIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 22 22" aria-hidden="true">
       <path
-        d="M8.4 5.6v12.8c0 .8.87 1.3 1.54.9l10.6-6.4a1.05 1.05 0 0 0 0-1.8l-10.6-6.4c-.67-.4-1.54.1-1.54.9Z"
-        fill="currentColor"
+        fill="#ffbc0d"
+        d="M21.79 8.39l-.09-.43-3.63-.63 2.11-2.85-.25-.27-3.1 1.49.39-3.95-.32-.18-1.89 3.19L12.91 0h-.37l.5 4.6L7.71.33l-.45.13 4.11 5.16L3.24 2.91l-.37.41 7.26 4.13L.11 8.29l-.11.62 10.41 1.13L1.73 17.22l.37.5 10.33-5.62-2.05 9.9h.63l3.96-9.31 2.41 7.29.43-.33-.99-7.41 3.76 4.27.25-.39-2.88-5.29 4.02 1.49.04-.45-3.6-2.66 3.4-.82Z"
       />
     </svg>
   );
 }
 
-function PauseGlyph() {
+function SoundCloudIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="6.8" y="5" width="4.2" height="14" rx="1.8" fill="currentColor" />
-      <rect x="13" y="5" width="4.2" height="14" rx="1.8" fill="currentColor" />
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#ff5500"
+        d="M23.999 14.165c-.052 1.796-1.612 3.169-3.4 3.169h-8.18a.68.68 0 0 1-.675-.683V7.862a.747.747 0 0 1 .452-.724s.75-.513 2.333-.513a5.364 5.364 0 0 1 2.763.755 5.433 5.433 0 0 1 2.57 3.54c.282-.08.574-.121.868-.12.884 0 1.73.358 2.347.992s.948 1.49.922 2.373ZM10.721 8.421c.247 2.98.427 5.697 0 8.672a.264.264 0 0 1-.53 0c-.395-2.946-.22-5.718 0-8.672a.264.264 0 0 1 .53 0ZM9.072 9.448c.285 2.659.37 4.986-.006 7.655a.277.277 0 0 1-.55 0c-.331-2.63-.256-5.02 0-7.655a.277.277 0 0 1 .556 0Zm-1.663-.257c.27 2.726.39 5.171 0 7.904a.266.266 0 0 1-.532 0c-.38-2.69-.257-5.21 0-7.904a.266.266 0 0 1 .532 0Zm-1.647.77a26.108 26.108 0 0 1-.008 7.147.272.272 0 0 1-.542 0 27.955 27.955 0 0 1 0-7.147.275.275 0 0 1 .55 0Zm-1.663-.257c.27 2.726.39 5.171 0 7.904a.266.266 0 0 1-.532 0c-.38-2.69-.257-5.21 0-7.904a.266.266 0 0 1 .532 0Zm-1.655-.273c.388 1.897.26 3.508-.01 5.412-.026.28-.514.283-.54 0-.244-1.878-.347-3.54-.01-5.412a.283.283 0 0 1 .56 0Zm-1.668.911c.4 1.268.257 2.292-.026 3.572a.257.257 0 0 1-.514 0c-.241-1.262-.354-2.312-.023-3.572a.283.283 0 0 1 .563 0Z"
+      />
     </svg>
   );
 }
@@ -144,7 +152,37 @@ export function LyricsStage() {
   const [playing, setPlaying] = useState(false);
   const [liked, setLiked] = useState(false);
   const [lyricsOn, setLyricsOn] = useState(true);
+  const [copied, setCopied] = useState(false);
   const paintRef = useRef<(progress: number, force?: boolean) => void>(() => {});
+
+  /* «Поделиться» — копирует адрес сайта; значок на секунду превращается
+     в галочку. На http-протоколе clipboard бывает недоступен — fallback
+     через временный textarea. */
+  const copyTimer = useRef(0);
+  const copyLink = () => {
+    const done = () => {
+      setCopied(true);
+      window.clearTimeout(copyTimer.current);
+      copyTimer.current = window.setTimeout(() => setCopied(false), 1400);
+    };
+    const fallback = () => {
+      const ta = document.createElement("textarea");
+      ta.value = "https://pizxxxxx.github.io/";
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      done();
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText("https://pizxxxxx.github.io/").then(done).catch(fallback);
+    } else {
+      fallback();
+    }
+  };
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -203,6 +241,9 @@ export function LyricsStage() {
         if (thumbRef.current && !thumbRef.current.src.endsWith(track.cover)) {
           thumbRef.current.src = track.cover;
         }
+        stage.querySelectorAll<HTMLElement>("[data-src]").forEach((el) => {
+          el.classList.toggle("is-on", el.dataset.src === track.id);
+        });
         if (liveRef.current) liveRef.current.textContent = `${track.title}, ${track.artist}`;
 
         liveBlocks.forEach((block, index) => {
@@ -415,7 +456,7 @@ export function LyricsStage() {
                 );
               })}
               <span className="hide-lyrics" aria-hidden="true">
-                <ListMusic size={18} />
+                <MorphIcon icon={lyricsOn ? Eye : EyeOff} size={16} reducedMotion="user" />
                 {lyricsOn ? "Скрыть текст" : "Показать текст"}
               </span>
             </button>
@@ -481,7 +522,7 @@ export function LyricsStage() {
                   <SkipBack size={16} />
                 </button>
                 <button type="button" className="icon-btn play-btn" aria-label={playing ? "Пауза" : "Играть текст"} aria-pressed={playing} onClick={togglePlay}>
-                  {playing ? <PauseGlyph /> : <PlayGlyph />}
+                  <MorphIcon icon={playing ? Pause : Play} size={18} reducedMotion="user" />
                 </button>
                 <button type="button" className="icon-btn" aria-label="Следующая строфа" onClick={() => jump(stageRef.current, 1)}>
                   <SkipForward size={16} />
@@ -496,7 +537,7 @@ export function LyricsStage() {
                   aria-pressed={liked}
                   onClick={() => setLiked((value) => !value)}
                 >
-                  <Heart size={16} fill={liked ? "currentColor" : "none"} />
+                  <MorphIcon icon={liked ? HEART_FILL : HeartData} size={16} reducedMotion="user" />
                 </button>
                 <button type="button" className="icon-btn transport-extra" aria-label="Оценка">
                   <Star size={16} />
@@ -511,8 +552,21 @@ export function LyricsStage() {
                   <b ref={titleRef}>de jure</b>
                   <small ref={artistRef}>королевский XVII</small>
                 </div>
-                <Sun size={14} className="transport-extra" />
-                <AudioLines size={14} className="transport-extra" />
+                <span className="t-src is-on" data-src="dejure" aria-hidden="true">
+                  <YandexMusicIcon />
+                </span>
+                <span className="t-src" data-src="cupsize" aria-hidden="true">
+                  <SoundCloudIcon />
+                </span>
+                <button
+                  type="button"
+                  className={copied ? "t-share is-copied" : "t-share"}
+                  aria-label="Скопировать ссылку на сайт"
+                  title="Скопировать ссылку на сайт"
+                  onClick={copyLink}
+                >
+                  <MorphIcon icon={copied ? Check : Share2} size={14} reducedMotion="user" />
+                </button>
               </div>
               <div className="transport-volume">
                 <Volume2 size={16} />
