@@ -129,7 +129,6 @@ export function LyricsStage() {
   const stageRef = useRef<HTMLElement>(null);
   const stickyRef = useRef<HTMLDivElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
-  const hairRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const elapsedRef = useRef<HTMLSpanElement>(null);
   const remainRef = useRef<HTMLSpanElement>(null);
@@ -164,7 +163,6 @@ export function LyricsStage() {
         : cursorAt(model, tracks, progress);
       progressRef.current = cursor.global;
 
-      if (hairRef.current) hairRef.current.style.transform = `scaleX(${cursor.global})`;
       if (rangeRef.current) {
         const dragging = document.activeElement === rangeRef.current;
         if (!dragging) rangeRef.current.value = String(Math.round(cursor.global * 1000));
@@ -290,12 +288,22 @@ export function LyricsStage() {
       if (frame) cancelAnimationFrame(frame);
     };
 
+    // На телефоне Play не уводит страницу сам: караоке едет по времени,
+    // экран остаётся на месте; ручной скролл по-прежнему перебивает.
+    const autoScroll = !window.matchMedia("(max-width: 719px)").matches;
+
     const tick = (now: number) => {
       if (!playingRef.current) return;
       const dt = last === 0 ? 0 : (now - last) / 1000;
       last = now;
       const next = Math.min(1, progressRef.current + dt / PLAY_SECONDS);
-      scrollToProgress(next);
+      if (autoScroll) {
+        scrollToProgress(next);
+      } else {
+        driveAt.current = performance.now();
+        paint(next);
+        updateFrame();
+      }
       if (next >= 1) {
         stop();
         return;
@@ -370,7 +378,6 @@ export function LyricsStage() {
           <div className="stage-blob stage-blob--c" />
           <img className="stage-wash" src="/covers/dejure.jpg" alt="" />
           <div className="stage-haze" />
-          <div ref={hairRef} className="stage-hair" />
           <div className="stage-inner">
           <div className="stage-grid">
             <button

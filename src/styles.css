@@ -796,17 +796,6 @@
   pointer-events: none;
 }
 
-.stage-hair {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--color-accent);
-  transform-origin: left center;
-  transform: scaleX(0);
-}
-
 .stage-inner {
   position: relative;
   z-index: 1;
@@ -2028,6 +2017,16 @@
   .cover-wrap { width: min(60vw, 15rem); }
   /* На узком экране углы hero наезжают на линейку эквалайзера — прячем. */
   .hero-corner { display: none; }
+  /* Караоке-сцена короче: пять экранов липкого скролла на телефоне —
+     перебор; прогресс тот же, просто проходит быстрее. */
+  .lyric-stage { height: 300vh; }
+  /* Ссылкам-«кнопкам» добавляем воздух под палец. */
+  .sec-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 2px;
+  }
 }
 
 @media (min-width: 980px) {

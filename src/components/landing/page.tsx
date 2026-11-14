@@ -106,7 +106,11 @@ export function Landing() {
       const landRot = Math.random() * 4.4 - 2.2;
       receipt.style.setProperty("--rest-rot", `${landRot.toFixed(2)}deg`);
       void receipt.offsetWidth; // сброс состояния перед новым вылетом
-      const T = 1150;
+      // На телефоне чек почти во всю ширину экрана: широкий перелёт через
+      // весь экран выглядит грубо — там мягкая посадка сверху с лёгким
+      // заносом справа, без разворота к зрителю.
+      const narrow = window.matchMedia("(max-width: 719px)").matches;
+      const T = narrow ? 900 : 1150;
       const t0 = performance.now();
       receipt.style.willChange = "transform, opacity";
 
@@ -116,14 +120,18 @@ export function Landing() {
         // влёт — разгон и мягкое торможение (кубический ease-in-out)
         const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
         const fall = Math.pow(1 - p, 1.15); // порывы затихают к посадке
-        // ниже цели, дуга вверх на разгоне и мягкий спуск на посадку
-        const x = 112 * (1 - e);
-        const y = 6 * Math.pow(1 - e, 1.1) - 3.4 * Math.sin(Math.PI * p) * Math.pow(1 - p, 0.75);
+        // десктоп: из-за правого края, ниже цели, дуга вверх на разгоне;
+        // мобилка: сверху вниз на место, лёгкий занос справа
+        const x = narrow ? 16 * (1 - e) : 112 * (1 - e);
+        const y = narrow
+          ? -6.5 * Math.pow(1 - e, 1.1)
+          : 6 * Math.pow(1 - e, 1.1) - 3.4 * Math.sin(Math.PI * p) * Math.pow(1 - p, 0.75);
         // финальный наклон — случайный угол посадки, а не ровный ноль
-        const rot =
-          landRot * e + 7.5 * Math.pow(1 - e, 1.2) + 2.6 * Math.sin(Math.PI * 2.3 * p) * fall;
-        const ry = -7 * (1 - e); // лёгкий разворот к зрителю выпрямляется к посадке
-        const sc = 1 + 0.025 * (1 - e);
+        const rot = narrow
+          ? landRot * e + 4 * Math.pow(1 - e, 1.2)
+          : landRot * e + 7.5 * Math.pow(1 - e, 1.2) + 2.6 * Math.sin(Math.PI * 2.3 * p) * fall;
+        const ry = narrow ? 0 : -7 * (1 - e); // лёгкий разворот к зрителю выпрямляется к посадке
+        const sc = 1 + (narrow ? 0.02 : 0.025) * (1 - e);
 
         receipt.style.opacity = "1";
         receipt.style.transform =
