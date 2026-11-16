@@ -20,7 +20,7 @@ import { MorphIcon } from "morphicons/react";
 import { Menu as MenuData, X as XData } from "lucide";
 import { libraryRows, sideLinks, themes, type SkinId } from "./data";
 import { LyricsStage } from "./lyrics-stage";
-import { PRIMARY_WAVE_SPEED, WaveCanvas } from "./wave-canvas";
+import { WaveCanvas } from "./wave-canvas";
 
 // Кнопки ведут на внутренний редиректор: он спрашивает GitHub API о последнем
 // релизе и сразу перекидывает на файл ассета (exe/apk). Если API недоступен,
@@ -66,8 +66,15 @@ function WaveLine({ text, className = "" }: { text: string; className?: string }
   );
 }
 
+// Темп и длина волны подобраны на локальном пульте: 0.195 об/с и L=1000 —
+// строка течёт заметно, но буквы не мечутся вверх-вниз.
+const HEADLINE_WAVE_SPEED = 0.195;
+
 function WaveTitle() {
   const rootRef = useRef<HTMLHeadingElement>(null);
+  const [speed, setSpeed] = useState(HEADLINE_WAVE_SPEED);
+  const speedRef = useRef(speed);
+  useEffect(() => { speedRef.current = speed; }, [speed]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -85,11 +92,9 @@ function WaveTitle() {
     document.fonts?.ready.then(measure).catch(() => undefined);
 
     const A = 23;
-    const L = 670;
-    // Та же угловая скорость, что у основного хребта на фоне — волны идут в такт.
-    const W = PRIMARY_WAVE_SPEED * Math.PI * 2;
+    const L = 1000;
     const k = (Math.PI * 2) / L;
-    let t = 0;
+    let turns = 0; // накопленные обороты фазы: менять скорость можно без скачка
     let last = performance.now();
     let frame = 0;
 
@@ -97,11 +102,11 @@ function WaveTitle() {
       frame = requestAnimationFrame(tick);
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
-      t += dt;
+      turns += dt * speedRef.current; // скорость в оборотах в секунду
       for (let li = 0; li < chars.length; li++) {
         const row = chars[li];
         for (let i = 0; i < row.length; i++) {
-          const phase = k * (centers[li]?.[i] ?? 0) + W * t; // плюс — волна бежит влево
+          const phase = k * (centers[li]?.[i] ?? 0) + turns * Math.PI * 2; // плюс — влево
           const y = A * Math.sin(phase);
           const rot = (Math.atan(A * k * Math.cos(phase)) * 180) / Math.PI;
           row[i].style.transform = `translate3d(0, ${y.toFixed(2)}px, 0) rotate(${rot.toFixed(2)}deg)`;
@@ -115,12 +120,35 @@ function WaveTitle() {
     };
   }, []);
 
+  const showControl =
+    import.meta.env.DEV ||
+    (typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).has("qa-speed"));
+
   return (
-    <h1 ref={rootRef} className="d1" aria-label="Lomify для ПК.">
-      <WaveLine text="Lomify" />
-      <WaveLine text="для" className="alt" />
-      <WaveLine text="ПК." className="alt" />
-    </h1>
+    <>
+      <h1 ref={rootRef} className="d1" aria-label="Lomify для ПК.">
+        <WaveLine text="Lomify" />
+        <WaveLine text="для" className="alt" />
+        <WaveLine text="ПК." className="alt" />
+      </h1>
+      {showControl && (
+        <label className="qa-speed">
+          <span>
+            скорость: <b>{speed.toFixed(3)}</b> об/с · {(speed * Math.PI * 2).toFixed(3)} рад/с · {" "}
+            {speed > 0 ? (1 / speed).toFixed(1) : "∞"}с период
+          </span>
+          <input
+            type="range"
+            min={0.005}
+            max={0.2}
+            step={0.005}
+            value={speed}
+            onChange={(event) => setSpeed(Number(event.target.value))}
+          />
+        </label>
+      )}
+    </>
   );
 }
 

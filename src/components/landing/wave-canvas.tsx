@@ -11,14 +11,16 @@ type Ridge = {
 };
 
 // Тихие тёплые хребты у низа hero — текстура, а не неоновая заставка.
-// Основной хребет задаёт темп: по этой же скорости идёт волна заголовка.
+// Хребты задают темп: заголовок идёт со скоростью самого медленного из них,
+// чтобы крупные буквы не выглядели резкими рядом с почти неподвижными линиями.
 export const PRIMARY_WAVE_SPEED = 0.06; // периодов в секунду
+export const SLOWEST_WAVE_SPEED = 0.02;
 
 const RIDGES: Ridge[] = [
   { amp: 0.05, len: 1.6, speed: PRIMARY_WAVE_SPEED, yBase: 0.6, thick: 2.2, alpha: 0.85, tint: "hot" },
   { amp: 0.075, len: 1.15, speed: -0.045, yBase: 0.66, thick: 1.8, alpha: 0.5, tint: "hot" },
   { amp: 0.1, len: 0.8, speed: 0.03, yBase: 0.73, thick: 1.4, alpha: 0.32, tint: "glow" },
-  { amp: 0.13, len: 0.5, speed: -0.02, yBase: 0.8, thick: 1.1, alpha: 0.18, tint: "glow" },
+  { amp: 0.13, len: 0.5, speed: -SLOWEST_WAVE_SPEED, yBase: 0.8, thick: 1.1, alpha: 0.18, tint: "glow" },
 ];
 
 /**

@@ -66,13 +66,16 @@ try {
   check("eq", d.eq, 4);
   check("bar", d.bar, true);
   check("hscroll", d.hscroll, false);
+  if (base.includes("github.io")) {
+    check("noQaSliderInProd", await page.evaluate(() => !document.querySelector(".qa-speed")), true);
+  }
 
   // Проверка синусоиды: по y и наклону каждой буквы восстанавливаем её фазу
   // и вычитаем k*cx. У всех букв всех строк остаток должен быть одинаков —
   // значит центры лежат на одной волне, а не прыгают независимо.
   const wave = await page.evaluate(async () => {
     const A = 23;
-    const k = (Math.PI * 2) / 670;
+    const k = (Math.PI * 2) / 1000;
     const lines = [...document.querySelectorAll(".d1-line")];
     const read = () =>
       lines.map((line) =>
@@ -115,7 +118,7 @@ try {
   check("waveChars", wave.count, 12);
   check("oneSine", wave.phaseSpread < 0.05, true);
   check("waveMoves", wave.moving, true);
-  check("waveSpeed", wave.speed >= 0.3 && wave.speed <= 0.46, true);
+  check("waveSpeed", wave.speed >= 1.1 && wave.speed <= 1.35, true);
   check("waveAmplitude", wave.maxY <= 23.5, true);
   check("headingLabel", wave.heading, "Lomify для ПК.");
   await page.screenshot({ path: "D:/lomisite/screenshots/hero-matte.png", fullPage: false });
