@@ -20,7 +20,7 @@ import { MorphIcon } from "morphicons/react";
 import { Menu as MenuData, X as XData } from "lucide";
 import { libraryRows, sideLinks, themes, type SkinId } from "./data";
 import { LyricsStage } from "./lyrics-stage";
-import { WaveCanvas } from "./wave-canvas";
+import { PRIMARY_WAVE_SPEED, WaveCanvas } from "./wave-canvas";
 
 // Кнопки ведут на внутренний редиректор: он спрашивает GitHub API о последнем
 // релизе и сразу перекидывает на файл ассета (exe/apk). Если API недоступен,
@@ -86,7 +86,8 @@ function WaveTitle() {
 
     const A = 23;
     const L = 670;
-    const W = 3.0;
+    // Та же угловая скорость, что у основного хребта на фоне — волны идут в такт.
+    const W = PRIMARY_WAVE_SPEED * Math.PI * 2;
     const k = (Math.PI * 2) / L;
     let t = 0;
     let last = performance.now();

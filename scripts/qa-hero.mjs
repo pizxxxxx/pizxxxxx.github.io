@@ -85,11 +85,18 @@ try {
           return { y, phase };
         }),
       );
+    const t0 = performance.now();
     const a = read();
     await new Promise((r) => setTimeout(r, 400));
     const b = read();
+    const t1 = performance.now();
     const flatA = a.flat();
     const flatB = b.flat();
+    const drift = Math.atan2(
+      Math.sin(flatB[0].phase - flatA[0].phase),
+      Math.cos(flatB[0].phase - flatA[0].phase),
+    );
+    const speed = Math.round((Math.abs(drift) / ((t1 - t0) / 1000)) * 1000) / 1000;
     const phases = flatA.map((p) => p.phase);
     const offsets = phases.map((p) =>
       Math.atan2(Math.sin(p - phases[0]), Math.cos(p - phases[0])),
@@ -99,6 +106,7 @@ try {
       count: flatA.length,
       phaseSpread: Math.round((Math.max(...offsets) - Math.min(...offsets)) * 1000) / 1000,
       moving: flatA.some((p, i) => Math.abs(p.y - flatB[i].y) > 1),
+      speed,
       maxY: Math.max(...flatA.map((p) => Math.abs(p.y))),
       heading: document.querySelector("h1").getAttribute("aria-label"),
     };
@@ -107,6 +115,7 @@ try {
   check("waveChars", wave.count, 12);
   check("oneSine", wave.phaseSpread < 0.05, true);
   check("waveMoves", wave.moving, true);
+  check("waveSpeed", wave.speed >= 0.3 && wave.speed <= 0.46, true);
   check("waveAmplitude", wave.maxY <= 23.5, true);
   check("headingLabel", wave.heading, "Lomify для ПК.");
   await page.screenshot({ path: "D:/lomisite/screenshots/hero-matte.png", fullPage: false });
