@@ -69,6 +69,9 @@ try {
   const float = await page.evaluate(async () => {
     const letters = document.querySelectorAll(".d1-line .float-ch");
     const one = letters[2];
+    const ys = [...document.querySelectorAll(".d1-line:first-child .float-ch")].map(
+      (el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m42,
+    );
     const samples = [];
     for (let i = 0; i < 9; i++) {
       const m = new DOMMatrixReadOnly(getComputedStyle(one).transform);
@@ -81,6 +84,7 @@ try {
       duration: getComputedStyle(one).animationDuration,
       samples,
       span: Math.round((Math.max(...samples) - Math.min(...samples)) * 10) / 10,
+      waveSpread: Math.round((Math.max(...ys) - Math.min(...ys)) * 10) / 10,
       maxShift: Math.max(...samples.map(Math.abs)),
       heading: document.querySelector("h1").textContent.replace(/\u00a0/g, " "),
     };
@@ -90,7 +94,8 @@ try {
   check("floatDuration", float.duration, "7s");
   check("floatMoves", float.samples.some((v, i) => i > 0 && v !== float.samples[i - 1]), true);
   check("floatVisible", float.span >= 4, true);
-  check("floatReadable", float.maxShift <= 12, true);
+  check("waveShape", float.waveSpread >= 5, true);
+  check("floatReadable", float.maxShift <= 10, true);
   check("headingText", float.heading, "Lomifyдля ПК.");
   await page.screenshot({ path: "D:/lomisite/screenshots/hero-matte.png", fullPage: false });
 
