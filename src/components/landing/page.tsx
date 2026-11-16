@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
   AudioLines,
@@ -51,18 +51,75 @@ function ReceiptBarcode() {
   );
 }
 
-/* Заголовок по буквам: каждая буква качается своей фазой — так же медленно,
-   как хребты волны на фоне, но сдвинуто по строке. Пробел держим неразрывным,
-   иначе «для ПК.» разъедется на две строки. */
-function FloatLine({ text, className = "" }: { text: string; className?: string }) {
+/* Одна бегущая синусоида на строку заголовка. Фаза буквы зависит только от
+   её x — поэтому центры всех букв строки лежат на одной волне. Один общий
+   rAF на все строки; никаких keyframes и задержек по индексу. */
+function WaveLine({ text, className = "" }: { text: string; className?: string }) {
   return (
-    <span className={className ? `d1-line ${className}` : "d1-line"}>
+    <span className={className ? `d1-line ${className}` : "d1-line"} aria-hidden="true">
       {Array.from(text).map((char, index) => (
-        <span key={index} className="float-ch" style={{ "--i": index } as CSSProperties}>
+        <span key={index} className="wave-ch">
           {char === " " ? "\u00a0" : char}
         </span>
       ))}
     </span>
+  );
+}
+
+function WaveTitle() {
+  const rootRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const lines = Array.from(root.querySelectorAll<HTMLElement>(".d1-line"));
+    const chars = lines.map((line) => Array.from(line.querySelectorAll<HTMLElement>(".wave-ch")));
+    let centers: number[][] = [];
+    const measure = () => {
+      centers = chars.map((row) => row.map((el) => el.offsetLeft + el.offsetWidth / 2));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    document.fonts?.ready.then(measure).catch(() => undefined);
+
+    const A = 23;
+    const L = 670;
+    const W = 3.0;
+    const k = (Math.PI * 2) / L;
+    let t = 0;
+    let last = performance.now();
+    let frame = 0;
+
+    const tick = (now: number) => {
+      frame = requestAnimationFrame(tick);
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      t += dt;
+      for (let li = 0; li < chars.length; li++) {
+        const row = chars[li];
+        for (let i = 0; i < row.length; i++) {
+          const phase = k * (centers[li]?.[i] ?? 0) + W * t; // плюс — волна бежит влево
+          const y = A * Math.sin(phase);
+          const rot = (Math.atan(A * k * Math.cos(phase)) * 180) / Math.PI;
+          row[i].style.transform = `translate3d(0, ${y.toFixed(2)}px, 0) rotate(${rot.toFixed(2)}deg)`;
+        }
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+
+  return (
+    <h1 ref={rootRef} className="d1" aria-label="Lomify для ПК.">
+      <WaveLine text="Lomify" />
+      <WaveLine text="для" className="alt" />
+      <WaveLine text="ПК." className="alt" />
+    </h1>
   );
 }
 
@@ -300,10 +357,7 @@ export function Landing() {
                 <span className="ticker-dot" />
                 сейчас играет · de jure — королевский XVII
               </p>
-              <h1 className="d1">
-                <FloatLine text="Lomify" />
-                <FloatLine text="для ПК." className="alt" />
-              </h1>
+              <WaveTitle />
               <p className="lede">
                 Тихий плеер для Windows: Яндекс Музыка, SoundCloud и твоя медиатека в одном окне.
                 Текст идёт по буквам, как в полноэкранном режиме. Листай вниз — увидишь.

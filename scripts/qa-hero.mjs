@@ -67,38 +67,48 @@ try {
   check("bar", d.bar, true);
   check("hscroll", d.hscroll, false);
 
-  // Буквы заголовка плавают в такт полосам на фоне — плавно и без сильного сдвига
-  const float = await page.evaluate(async () => {
-    const letters = document.querySelectorAll(".d1-line .float-ch");
-    const one = letters[2];
-    const ys = [...document.querySelectorAll(".d1-line:first-child .float-ch")].map(
-      (el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m42,
+  // Проверка синусоиды: по y и наклону каждой буквы восстанавливаем её фазу
+  // и вычитаем k*cx. У всех букв всех строк остаток должен быть одинаков —
+  // значит центры лежат на одной волне, а не прыгают независимо.
+  const wave = await page.evaluate(async () => {
+    const A = 23;
+    const k = (Math.PI * 2) / 670;
+    const lines = [...document.querySelectorAll(".d1-line")];
+    const read = () =>
+      lines.map((line) =>
+        [...line.querySelectorAll(".wave-ch")].map((el) => {
+          const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
+          const y = m.m42;
+          const rot = Math.atan2(m.b, m.a);
+          const cx = el.offsetLeft + el.offsetWidth / 2;
+          const phase = Math.atan2(y / A, Math.tan(rot) / (A * k)) - k * cx;
+          return { y, phase };
+        }),
+      );
+    const a = read();
+    await new Promise((r) => setTimeout(r, 400));
+    const b = read();
+    const flatA = a.flat();
+    const flatB = b.flat();
+    const phases = flatA.map((p) => p.phase);
+    const offsets = phases.map((p) =>
+      Math.atan2(Math.sin(p - phases[0]), Math.cos(p - phases[0])),
     );
-    const samples = [];
-    for (let i = 0; i < 9; i++) {
-      const m = new DOMMatrixReadOnly(getComputedStyle(one).transform);
-      samples.push(Math.round(m.m42 * 100) / 100); // translateY
-      await new Promise((r) => setTimeout(r, 100));
-    }
     return {
-      count: letters.length,
-      animation: getComputedStyle(one).animationName,
-      duration: getComputedStyle(one).animationDuration,
-      samples,
-      span: Math.round((Math.max(...samples) - Math.min(...samples)) * 10) / 10,
-      waveSpread: Math.round((Math.max(...ys) - Math.min(...ys)) * 10) / 10,
-      maxShift: Math.max(...samples.map(Math.abs)),
-      heading: document.querySelector("h1").textContent.replace(/\u00a0/g, " "),
+      lines: lines.length,
+      count: flatA.length,
+      phaseSpread: Math.round((Math.max(...offsets) - Math.min(...offsets)) * 1000) / 1000,
+      moving: flatA.some((p, i) => Math.abs(p.y - flatB[i].y) > 1),
+      maxY: Math.max(...flatA.map((p) => Math.abs(p.y))),
+      heading: document.querySelector("h1").getAttribute("aria-label"),
     };
   });
-  check("floatChars", float.count, 13);
-  check("floatAnim", float.animation, "letter-float");
-  check("floatDuration", float.duration, "7s");
-  check("floatMoves", float.samples.some((v, i) => i > 0 && v !== float.samples[i - 1]), true);
-  check("floatVisible", float.span >= 4, true);
-  check("waveShape", float.waveSpread >= 5, true);
-  check("floatReadable", float.maxShift <= 10, true);
-  check("headingText", float.heading, "Lomifyдля ПК.");
+  check("waveLines", wave.lines, 3);
+  check("waveChars", wave.count, 12);
+  check("oneSine", wave.phaseSpread < 0.05, true);
+  check("waveMoves", wave.moving, true);
+  check("waveAmplitude", wave.maxY <= 23.5, true);
+  check("headingLabel", wave.heading, "Lomify для ПК.");
   await page.screenshot({ path: "D:/lomisite/screenshots/hero-matte.png", fullPage: false });
 
   // Переключение тем работает и возвращается на Матовый
@@ -130,6 +140,23 @@ try {
   check("mobileSideHidden", mob.sideHidden, true);
   check("mobileSkin", mob.skin, "matte");
   await m.close();
+
+  // При «меньше движения» анимация не стартует — буквы остаются на месте
+  const rm = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: "reduce",
+  });
+  const rp = await rm.newPage();
+  await rp.goto(base + "/?fresh=" + Date.now(), { waitUntil: "load" });
+  await rp.waitForSelector(".d1-line .wave-ch");
+  await rp.waitForTimeout(400);
+  const still = await rp.evaluate(() =>
+    [...document.querySelectorAll(".d1-line .wave-ch")].every(
+      (el) => getComputedStyle(el).transform === "none",
+    ),
+  );
+  check("reducedMotionStill", still, true);
+  await rm.close();
 
   check("consoleClean", errors, []);
 } finally {

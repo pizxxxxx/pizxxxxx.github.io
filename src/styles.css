@@ -481,30 +481,15 @@
   text-wrap: balance;
 }
 
-.d1-line { display: block; }
-
-/* Буквы заголовка образуют бегущую волну по всей строке: сдвиг между
-   соседними буквами — около шестой части периода, так что в один момент они занимают
-   разные фазы и вместо «прыгающих букв» видно плавную линию. Наклон идёт по
-   производной синуса — как у верёвки. Размах растёт с размером шрифта. */
-.d1-line .float-ch {
-  --float-amp: clamp(3px, 0.7vw, 9px);
-  display: inline-block;
-  animation: letter-float 7s linear infinite;
-  animation-delay: calc(var(--i, 0) * -1.1s);
-  will-change: transform;
+/* Относительная база для offsetLeft букв — фаза считается от x внутри строки. */
+.d1-line {
+  position: relative;
+  display: block;
 }
 
-@keyframes letter-float {
-  0%    { transform: translate3d(0, 0, 0) rotate(0.9deg); }
-  12.5% { transform: translate3d(0, calc(var(--float-amp) * -0.7), 0) rotate(0.64deg); }
-  25%   { transform: translate3d(0, calc(var(--float-amp) * -1), 0) rotate(0deg); }
-  37.5% { transform: translate3d(0, calc(var(--float-amp) * -0.7), 0) rotate(-0.64deg); }
-  50%   { transform: translate3d(0, 0, 0) rotate(-0.9deg); }
-  62.5% { transform: translate3d(0, calc(var(--float-amp) * 0.7), 0) rotate(-0.64deg); }
-  75%   { transform: translate3d(0, var(--float-amp), 0) rotate(0deg); }
-  87.5% { transform: translate3d(0, calc(var(--float-amp) * 0.7), 0) rotate(0.64deg); }
-  100%  { transform: translate3d(0, 0, 0) rotate(0.9deg); }
+.d1-line .wave-ch {
+  display: inline-block;
+  will-change: transform;
 }
 
 .d1 .alt,
@@ -2488,7 +2473,6 @@
   .track-row,
   .side-link,
   .side-now-eq i,
-  .d1-line .float-ch,
   .theme-card,
   .feature,
   .glass-card,
