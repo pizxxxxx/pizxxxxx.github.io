@@ -153,6 +153,41 @@ try {
   check("mobileSkin", mob.skin, "matte");
   await m.close();
 
+  // Низкая частота кадров (как в превью) не должна тормозить волну
+  const slow = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await slow.addInitScript(() => {
+    window.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 100);
+  });
+  const sp = await slow.newPage();
+  await sp.goto(base + "/?fresh=" + Date.now(), { waitUntil: "load" });
+  await sp.waitForSelector(".d1-line .wave-ch");
+  await sp.waitForTimeout(400);
+  const slowSpeed = await sp.evaluate(async () => {
+    const A = 23;
+    const k = (Math.PI * 2) / 1000;
+    const el = document.querySelector(".d1-line .wave-ch");
+    const ph = () => {
+      const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
+      return Math.atan2(m.m42 / A, Math.tan(Math.atan2(m.b, m.a)) / (A * k));
+    };
+    const t0 = performance.now();
+    const p0 = ph();
+    await new Promise((r) => setTimeout(r, 900));
+    const t1 = performance.now();
+    const p1 = ph();
+    const drift = Math.atan2(Math.sin(p1 - p0), Math.cos(p1 - p0));
+    return Math.round((Math.abs(drift) / ((t1 - t0) / 1000)) * 1000) / 1000;
+  });
+  out.checks.lowFpsSpeed = {
+    // При 10 fps замер по двум кадрам шумит; важно отличить ~1.2 от ~0.6
+    // (ровно вдвое медленнее — так делал старый лимит dt).
+    ok: slowSpeed >= 0.9 && slowSpeed <= 1.7,
+    value: slowSpeed,
+    expect: "0.9..1.7",
+  };
+  if (!out.checks.lowFpsSpeed.ok) out.pass = false;
+  await slow.close();
+
   // При «меньше движения» анимация не стартует — буквы остаются на месте
   const rm = await browser.newContext({
     viewport: { width: 1440, height: 900 },

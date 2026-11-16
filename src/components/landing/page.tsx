@@ -100,9 +100,11 @@ function WaveTitle() {
 
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick);
-      const dt = Math.min((now - last) / 1000, 0.05);
+      const elapsed = (now - last) / 1000;
       last = now;
-      turns += dt * speedRef.current; // скорость в оборотах в секунду
+      // Не обрезаем обычные просадки кадров: в превью rAF может идти в 10 fps,
+      // и жёсткий лимит dt тормозил бы волну вдвое. Защита только от спячки.
+      if (elapsed < 0.5) turns += elapsed * speedRef.current; // обороты в секунду
       for (let li = 0; li < chars.length; li++) {
         const row = chars[li];
         for (let i = 0; i < row.length; i++) {
