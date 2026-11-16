@@ -55,6 +55,32 @@ try {
   check("eq", d.eq, 4);
   check("bar", d.bar, true);
   check("hscroll", d.hscroll, false);
+
+  // Буквы заголовка плавают в такт полосам на фоне — плавно и без сильного сдвига
+  const float = await page.evaluate(async () => {
+    const letters = document.querySelectorAll(".d1-line .float-ch");
+    const one = letters[2];
+    const samples = [];
+    for (let i = 0; i < 9; i++) {
+      const m = new DOMMatrixReadOnly(getComputedStyle(one).transform);
+      samples.push(Math.round(m.m42 * 100) / 100); // translateY
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return {
+      count: letters.length,
+      animation: getComputedStyle(one).animationName,
+      duration: getComputedStyle(one).animationDuration,
+      samples,
+      maxShift: Math.max(...samples.map(Math.abs)),
+      heading: document.querySelector("h1").textContent.replace(/\u00a0/g, " "),
+    };
+  });
+  check("floatChars", float.count, 13);
+  check("floatAnim", float.animation, "letter-float");
+  check("floatDuration", float.duration, "16s");
+  check("floatMoves", float.samples.some((v, i) => i > 0 && v !== float.samples[i - 1]), true);
+  check("floatReadable", float.maxShift <= 5, true);
+  check("headingText", float.heading, "Lomifyдля ПК.");
   await page.screenshot({ path: "D:/lomisite/screenshots/hero-matte.png", fullPage: false });
 
   // Переключение тем работает и возвращается на Матовый

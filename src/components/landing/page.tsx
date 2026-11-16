@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   ArrowUpRight,
   AudioLines,
@@ -48,6 +48,21 @@ function ReceiptBarcode() {
         return rect;
       })}
     </svg>
+  );
+}
+
+/* Заголовок по буквам: каждая буква качается своей фазой — так же медленно,
+   как хребты волны на фоне, но сдвинуто по строке. Пробел держим неразрывным,
+   иначе «для ПК.» разъедется на две строки. */
+function FloatLine({ text, className = "" }: { text: string; className?: string }) {
+  return (
+    <span className={className ? `d1-line ${className}` : "d1-line"}>
+      {Array.from(text).map((char, index) => (
+        <span key={index} className="float-ch" style={{ "--i": index } as CSSProperties}>
+          {char === " " ? "\u00a0" : char}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -286,8 +301,8 @@ export function Landing() {
                 сейчас играет · de jure — королевский XVII
               </p>
               <h1 className="d1">
-                <span className="d1-line">Lomify</span>
-                <span className="d1-line alt">для ПК.</span>
+                <FloatLine text="Lomify" />
+                <FloatLine text="для ПК." className="alt" />
               </h1>
               <p className="lede">
                 Тихий плеер для Windows: Яндекс Музыка, SoundCloud и твоя медиатека в одном окне.

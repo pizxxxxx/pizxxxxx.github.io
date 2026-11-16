@@ -483,6 +483,22 @@
 
 .d1-line { display: block; }
 
+/* Буквы заголовка дышат в такт хребтам волны на фоне: та же медленная
+   синусоида, сдвинутая по буквам. 4px заметны, но текст читается спокойно. */
+.d1-line .float-ch {
+  display: inline-block;
+  animation: letter-float 16s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.55s);
+  will-change: transform;
+}
+
+@keyframes letter-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  25% { transform: translate3d(0, -4px, 0) rotate(-0.35deg); }
+  50% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  75% { transform: translate3d(0, 4px, 0) rotate(0.35deg); }
+}
+
 .d1 .alt,
 .sec-title .alt { color: var(--color-hot); }
 
@@ -2447,6 +2463,7 @@
   .track-row,
   .side-link,
   .side-now-eq i,
+  .d1-line .float-ch,
   .theme-card,
   .feature,
   .glass-card,
