@@ -2512,7 +2512,7 @@
 /* ===== Лента из термопринтера: чек printable по скроллу ===== */
 .receipt-feed {
   position: relative;
-  height: 240vh;
+  height: 200vh;
   overflow: clip;
   background:
     radial-gradient(1100px 700px at 30% 0%, var(--paper-raised), transparent 70%),

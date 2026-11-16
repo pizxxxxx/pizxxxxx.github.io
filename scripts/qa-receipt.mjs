@@ -144,10 +144,16 @@ try {
     papers: document.querySelectorAll(".rf-paper").length,
     qr: document.querySelectorAll(".rf-qr").length,
     lines: document.querySelectorAll(".rf-line").length,
+    qrCaption: [...document.querySelectorAll(".rf-line")].some((el) => el.textContent.includes("GITHUB.IO")),
+    legal: [...document.querySelectorAll(".rf-line")].some((el) =>
+      el.textContent.includes("НЕ ФИСКАЛЬНЫЙ"),
+    ),
   }));
   check("oneReceipt", single.papers, 1);
   check("oneQr", single.qr, 1);
-  check("linesCount", single.lines, 41);
+  check("linesCount", single.lines, 36);
+  check("noQrCaption", single.qrCaption, false);
+  check("legalStillThere", single.legal, true);
   await ctx.close();
 
   // Мобильная версия: лист и пятна помещаются, QR и CTA видны
