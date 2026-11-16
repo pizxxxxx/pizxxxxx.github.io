@@ -483,20 +483,22 @@
 
 .d1-line { display: block; }
 
-/* Буквы заголовка дышат в такт хребтам волны на фоне: та же медленная
-   синусоида, сдвинутая по буквам. 4px заметны, но текст читается спокойно. */
+/* Буквы заголовка покачиваются волной, как хребты на фоне: та же синусоида,
+   но с заметным сдвигом по буквам. Размах растёт с размером шрифта — на
+   телефоне амплитуда маленькая, на большом экране до 11px, текст читается. */
 .d1-line .float-ch {
+  --float-amp: clamp(3px, 0.85vw, 11px);
   display: inline-block;
-  animation: letter-float 16s ease-in-out infinite;
-  animation-delay: calc(var(--i, 0) * -0.55s);
+  animation: letter-float 7s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.42s);
   will-change: transform;
 }
 
 @keyframes letter-float {
   0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  25% { transform: translate3d(0, -4px, 0) rotate(-0.35deg); }
+  25% { transform: translate3d(0, calc(var(--float-amp) * -1), 0) rotate(-0.8deg); }
   50% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  75% { transform: translate3d(0, 4px, 0) rotate(0.35deg); }
+  75% { transform: translate3d(0, var(--float-amp), 0) rotate(0.8deg); }
 }
 
 .d1 .alt,

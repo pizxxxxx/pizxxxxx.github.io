@@ -80,15 +80,17 @@ try {
       animation: getComputedStyle(one).animationName,
       duration: getComputedStyle(one).animationDuration,
       samples,
+      span: Math.round((Math.max(...samples) - Math.min(...samples)) * 10) / 10,
       maxShift: Math.max(...samples.map(Math.abs)),
       heading: document.querySelector("h1").textContent.replace(/\u00a0/g, " "),
     };
   });
   check("floatChars", float.count, 13);
   check("floatAnim", float.animation, "letter-float");
-  check("floatDuration", float.duration, "16s");
+  check("floatDuration", float.duration, "7s");
   check("floatMoves", float.samples.some((v, i) => i > 0 && v !== float.samples[i - 1]), true);
-  check("floatReadable", float.maxShift <= 5, true);
+  check("floatVisible", float.span >= 4, true);
+  check("floatReadable", float.maxShift <= 12, true);
   check("headingText", float.heading, "Lomifyдля ПК.");
   await page.screenshot({ path: "D:/lomisite/screenshots/hero-matte.png", fullPage: false });
 
