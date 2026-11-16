@@ -344,10 +344,10 @@ export function Landing() {
               <div className="app-glow" />
               <div className="app-body">
                 <aside className="app-side">
+                  <img className="side-watermark" src="/brand/side-icon.png" alt="" />
                   <div className="side-brand">
-                    <span className="side-mark"><i /><i /><i /></span>
-                    <b>lomify</b>
-                    <span className="side-ver mono">3.0</span>
+                    <b>Lomify<span className="side-next">NEXT</span></b>
+                    <small>Твоя музыка, без лишнего</small>
                   </div>
                   <p className="side-label mono">библиотека</p>
                   <div className="side-nav">

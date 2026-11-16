@@ -654,48 +654,61 @@
 /* Левая панель витрины — компактный интерфейс плеера: бренд, навигация со
    счётчиком и карточка «сейчас играет» вместо пустовавшего столбца. */
 .app-side {
+  position: relative;
   display: none;
   flex-direction: column;
   gap: 0;
+  overflow: hidden;
+  isolation: isolate;
   padding: 1rem 0.7rem 0.85rem;
   background: color-mix(in oklab, black 28%, transparent);
   border-right: 1px solid color-mix(in oklab, var(--color-fg) 6%, transparent);
 }
 
+/* Иконка приложения — крупный полупрозрачный водяной знак позади пунктов,
+   как в самом плеере: краёв не видно, только мягкое свечение точек. */
+.side-watermark {
+  position: absolute;
+  top: 0.4rem;
+  left: 50%;
+  width: 15rem;
+  max-width: none;
+  height: 15rem;
+  transform: translateX(-50%);
+  object-fit: cover;
+  opacity: 0.16;
+  z-index: 0;
+  pointer-events: none;
+  mask-image: radial-gradient(circle, #000 32%, transparent 76%);
+  -webkit-mask-image: radial-gradient(circle, #000 32%, transparent 76%);
+}
+
 .side-brand {
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.15rem;
   padding: 0.1rem 0.45rem 1.1rem;
   color: var(--color-fg);
-  font-size: 0.92rem;
+}
+
+.side-brand b {
+  font-size: 0.95rem;
   letter-spacing: -0.02em;
 }
 
-.side-mark {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 13px;
-}
+.side-next { color: var(--color-accent); }
 
-.side-mark i {
-  width: 2px;
-  border-radius: 2px;
-  background: var(--color-accent);
-}
-
-.side-mark i:nth-child(1) { height: 6px; }
-.side-mark i:nth-child(2) { height: 12px; }
-.side-mark i:nth-child(3) { height: 8px; }
-
-.side-ver {
-  margin-left: auto;
+.side-brand small {
   color: var(--color-dim);
-  font-size: 9px;
+  font-size: 0.62rem;
+  letter-spacing: 0.01em;
 }
 
 .side-label {
+  position: relative;
+  z-index: 1;
   margin: 0 0 0.5rem;
   padding: 0 0.55rem;
   color: var(--color-dim);
@@ -705,6 +718,8 @@
 }
 
 .side-nav {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -752,6 +767,8 @@
 }
 
 .side-now {
+  position: relative;
+  z-index: 1;
   margin-top: auto;
   padding: 0.65rem;
   border: 1px solid color-mix(in oklab, var(--color-fg) 9%, transparent);

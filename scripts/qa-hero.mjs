@@ -31,6 +31,11 @@ try {
       pressed: q('.theme-card[aria-pressed="true"] h3')?.textContent,
       sideShown: cs(".app-side").display !== "none",
       brand: q(".side-brand b")?.textContent,
+      tagline: q(".side-brand small")?.textContent,
+      iconLoaded: q(".side-watermark")?.complete && q(".side-watermark")?.naturalWidth > 0,
+      watermarkW: Math.round(q(".side-watermark")?.getBoundingClientRect().width ?? 0),
+      watermarkOpacity: Number(getComputedStyle(q(".side-watermark")).opacity),
+      versionGone: !q(".side-ver"),
       navCount: side.querySelectorAll(".side-link").length,
       onCount: side.querySelectorAll(".side-link.is-on").length,
       counter: q(".side-count")?.textContent,
@@ -46,7 +51,11 @@ try {
   check("skin", d.skin, "matte");
   check("pressed", d.pressed, "Матовый");
   check("sideShown", d.sideShown, true);
-  check("brand", d.brand, "lomify");
+  check("brand", d.brand, "LomifyNEXT");
+  check("tagline", d.tagline, "Твоя музыка, без лишнего");
+  check("iconLoaded", d.iconLoaded, true);
+  check("watermarkBig", d.watermarkW >= 200 && d.watermarkOpacity < 0.3, true);
+  check("versionGone", d.versionGone, true);
   check("navCount", d.navCount, 5);
   check("onCount", d.onCount, 1);
   check("counter", d.counter, "2");
