@@ -312,9 +312,10 @@ export function ReceiptPrinter() {
     let cur = reduced ? 1 : 0;
     const loop = () => {
       const total = Math.max(1, feed.offsetHeight - window.innerHeight);
-      const target = reduced
-        ? 1
-        : Math.min(1, Math.max(0, -feed.getBoundingClientRect().top / total));
+      // Печать заканчивается на 72% секции: дальше чек стоит целым в кадре,
+      // пока sticky-сцена не отпустит у самого края секции.
+      const raw = Math.min(1, Math.max(0, -feed.getBoundingClientRect().top / total));
+      const target = reduced ? 1 : Math.min(1, raw / 0.72);
       cur += (target - cur) * 0.14;
       if (Math.abs(target - cur) < 0.0006) cur = target;
 
@@ -324,9 +325,10 @@ export function ReceiptPrinter() {
       win.classList.toggle("is-done", done);
       cta.classList.toggle("is-done", cur > 0.98);
       const sway = Math.sin(cur * Math.PI) * 0.6 * (1 - cur * 0.4);
-      // Невидимый принтер выдавливает ленту: пока печатает, лист чуть
-      // приподнят и опускается по мере выхода, а не просто проявляется.
-      const feedShift = -12 * (1 - cur);
+      // Печать идёт с хвоста: нижний край листа выходит первым и опускается,
+      // а шапка появляется последней у щели. Окно растёт сверху вниз, лист
+      // сдвинут вверх на нераспечатанную высоту — видно нижнюю часть чека.
+      const feedShift = -(1 - cur) * paper.offsetHeight;
       wrap.style.transform = `translate3d(0, ${feedShift.toFixed(1)}px, 0) rotate(${(-0.8 + sway).toFixed(3)}deg)`;
       requestAnimationFrame(loop);
     };

@@ -68,8 +68,19 @@ try {
       feedY: new DOMMatrixReadOnly(getComputedStyle(document.querySelector(".rf-paper-wrap")).transform).m42,
       slot: !!document.querySelector(".rf-feedslot"),
       stains: document.querySelectorAll(".rf-stain").length,
+      tailVisible: (() => {
+        const lines = document.querySelectorAll(".rf-line");
+        const last = lines[lines.length - 1].getBoundingClientRect();
+        const w = win.getBoundingClientRect();
+        return last.top >= w.top - 2 && last.bottom <= w.bottom + 2;
+      })(),
+      headHidden: (() => {
+        const first = document.querySelector(".rf-line").getBoundingClientRect();
+        return first.bottom < win.getBoundingClientRect().top + 2;
+      })(),
     };
   });
+  check("printsTailFirst", middle.tailVisible && middle.headHidden, true);
   check("printingPartial", middle.winH > 40 && middle.winH < middle.paperH - 40, true);
   check("ctaHiddenMid", Number(middle.cta) < 0.1, true);
   check("stainsAroundPaper", middle.stains, 3);
@@ -77,15 +88,18 @@ try {
   check("paperFeedsDown", middle.feedY < -1, true);
   await page.screenshot({ path: "D:/lomisite/screenshots/receipt-printing.png" });
 
-  // Конец секции: вся лента, CTA, кнопка отрыва
+  // 88% секции: печать уже закончилась (на 72%), чек ещё целиком в кадре
   const end = await page.evaluate(async () => {
     const feed = document.querySelector(".receipt-feed");
     const total = feed.offsetHeight - window.innerHeight;
-    window.scrollTo({ top: feed.offsetTop + total * 1.1, behavior: "instant" });
+    window.scrollTo({ top: feed.offsetTop + total * 0.88, behavior: "instant" });
     await new Promise((r) => setTimeout(r, 1500));
     const win = document.querySelector(".rf-win");
     const paper = document.querySelector(".rf-paper");
+    const r = paper.getBoundingClientRect();
     return {
+      paperTop: Math.round(r.top),
+      paperBottom: Math.round(r.bottom),
       winH: win.offsetHeight,
       paperH: paper.offsetHeight, // rect у наклонённого листа больше на ~4px
       done: win.classList.contains("is-done"),
@@ -98,6 +112,7 @@ try {
     };
   });
   check("fullTape", Math.abs(end.winH - end.paperH) <= 3, true);
+  check("wholeReceiptInView", end.paperTop >= -2 && end.paperBottom <= 902, true);
   check("tornEdgesVisible", end.done && end.overflow === "visible", true);
   check("ctaVisibleEnd", Number(end.cta) > 0.9, true);
   check("noPrinter", end.noPrinter, true);
