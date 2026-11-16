@@ -8,7 +8,10 @@ import {
   Heart,
   Keyboard,
   Library,
+  Pause,
   Search,
+  SkipBack,
+  SkipForward,
   SlidersHorizontal,
   Smartphone,
   Waves,
@@ -54,7 +57,8 @@ const RECEIPT_TEAR =
 
 export function Landing() {
   const [open, setOpen] = useState(false);
-  const [skin, setSkin] = useState<SkinId>("mister");
+  // Матовый — тема с тремя фото в витрине; её и держим по умолчанию.
+  const [skin, setSkin] = useState<SkinId>("matte");
 
   useEffect(() => {
     document.documentElement.dataset.skin = skin;
@@ -325,16 +329,43 @@ export function Landing() {
               <div className="app-glow" />
               <div className="app-body">
                 <aside className="app-side">
-                  {sideLinks.map((label, index) => {
-                    const Icon = sideIcons[index];
-                    // подсвечены «Любимые» — витрина плеера стоит на ней
-                    return (
-                      <div key={label} className={index === 4 ? "side-link is-on" : "side-link"}>
-                        <Icon size={14} />
-                        {label}
-                      </div>
-                    );
-                  })}
+                  <div className="side-brand">
+                    <span className="side-mark"><i /><i /><i /></span>
+                    <b>lomify</b>
+                    <span className="side-ver mono">3.0</span>
+                  </div>
+                  <p className="side-label mono">библиотека</p>
+                  <div className="side-nav">
+                    {sideLinks.map((label, index) => {
+                      const Icon = sideIcons[index];
+                      // подсвечены «Любимые» — витрина плеера стоит на ней
+                      return (
+                        <div key={label} className={index === 4 ? "side-link is-on" : "side-link"}>
+                          <Icon size={14} />
+                          <span>{label}</span>
+                          {index === 4 && <i className="side-count mono">2</i>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="side-now">
+                    <div className="side-now-top">
+                      <span className="side-now-cover"><img src="/covers/dejure.jpg" alt="" /></span>
+                      <span className="side-now-text">
+                        <small>сейчас играет</small>
+                        <b>de jure</b>
+                        <span>королевский XVII</span>
+                      </span>
+                      <span className="side-now-eq"><i /><i /><i /><i /></span>
+                    </div>
+                    <div className="side-now-ctrl">
+                      <SkipBack size={12} />
+                      <span className="side-play"><Pause size={10} fill="currentColor" /></span>
+                      <SkipForward size={12} />
+                      <span className="side-clock mono">0:41 / 1:37</span>
+                    </div>
+                    <div className="side-now-bar"><i /></div>
+                  </div>
                 </aside>
                 <div className="app-main">
                   <div className="app-main-head">
@@ -398,8 +429,8 @@ export function Landing() {
                 Свой вид <span className="alt">под настроение.</span>
               </h2>
               <p className="section-lead">
-                Цвет темы и плотность панелей. Некий мистер C подбирает цвета по обложке, Матовый
-                держит выбранную палитру. Нажми стиль — страница переоденется.
+                Цвет темы и плотность панелей. По умолчанию стоит Матовый — он держит выбранную
+                палитру; Некий мистер C подбирает цвета по обложке. Нажми стиль — страница переоденется.
               </p>
             </div>
             {/* Подпись над первым рядом тем — тем же тоном, что подписи
