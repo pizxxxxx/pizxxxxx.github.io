@@ -20,6 +20,7 @@ import { MorphIcon } from "morphicons/react";
 import { Menu as MenuData, X as XData } from "lucide";
 import { libraryRows, sideLinks, themes, type SkinId } from "./data";
 import { LyricsStage } from "./lyrics-stage";
+import { ReceiptPrinter } from "./receipt-printer";
 import { WaveCanvas } from "./wave-canvas";
 
 // Кнопки ведут на внутренний редиректор: он спрашивает GitHub API о последнем
@@ -34,22 +35,6 @@ const SOURCE = "https://github.com/pizxxxxx/LomifyNEXT";
 const YOOMONEY = "https://yoomoney.ru/to/4100116984624656";
 
 const sideIcons = [Library, Search, Waves, AudioLines, Heart];
-
-/* Штрихкод чека: статичные «случайные» полосы — без рантайма и без SSR-дрейфа. */
-const RECEIPT_BARS = [3, 1, 2, 1, 1, 3, 2, 1, 3, 1, 2, 2, 1, 1, 3, 1, 2, 1, 1, 2, 3, 1, 1, 2, 1, 3, 1, 2, 1, 1, 2, 1];
-
-function ReceiptBarcode() {
-  let x = 0;
-  return (
-    <svg className="r-code" viewBox="0 0 143 32" preserveAspectRatio="none" aria-hidden="true">
-      {RECEIPT_BARS.map((w, i) => {
-        const rect = <rect key={i} x={x} y={0} width={w * 1.4} height={32} />;
-        x += w * 1.4 + 2.2;
-        return rect;
-      })}
-    </svg>
-  );
-}
 
 /* Одна бегущая синусоида на строку заголовка. Фаза буквы зависит только от
    её x — поэтому центры всех букв строки лежат на одной волне. Один общий
@@ -154,10 +139,6 @@ function WaveTitle() {
   );
 }
 
-/* Рваный нижний край чека: зубцы идут справа налево от правого края листа. */
-const RECEIPT_TEAR =
-  "M0 0H320V6L310 11L300 4L290 10L280 3L270 9L260 5L250 11L240 4L230 9L220 3L210 10L200 5L190 11L180 4L170 9L160 3L150 10L140 5L130 11L120 4L110 9L100 3L90 10L80 5L70 11L60 4L50 9L40 3L30 10L20 5L10 11L0 6Z";
-
 export function Landing() {
   const [open, setOpen] = useState(false);
   // Матовый — тема с тремя фото в витрине; её и держим по умолчанию.
@@ -167,133 +148,6 @@ export function Landing() {
     document.documentElement.dataset.skin = skin;
     document.documentElement.dataset.glass = "high";
   }, [skin]);
-
-  // Чек красиво прилетает из-за правого края секции, как брошенный лист:
-  // разгон, дуга с мягким торможением, лёгкий разворот к зрителю — и
-  // распластывается на месте под случайным углом. Полёт ведёт JS по
-  // кадрам. Когда чек целиком уходит из вьюпорта — сбрасывается, при
-  // следующем появлении прилетает снова. Клик по чеку ничего не ломает.
-  useEffect(() => {
-    const section = document.getElementById("download");
-    const holder = section?.querySelector<HTMLElement>(".price-receipt");
-    const receipt = section?.querySelector<HTMLElement>(".receipt");
-    if (!section || !holder || !receipt) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    let raf = 0;
-    let flying = false;
-    let timer = 0;
-
-    const stop = () => {
-      if (raf) {
-        cancelAnimationFrame(raf);
-        raf = 0;
-      }
-      if (timer) {
-        window.clearTimeout(timer);
-        timer = 0;
-      }
-    };
-
-    /* Порыв несёт лист из-за правого края на его место. */
-    const flyIn = () => {
-      if (flying) return;
-      flying = true;
-      stop();
-      receipt.classList.remove("is-rest");
-      if (reduced) {
-        flying = false;
-        receipt.style.opacity = "";
-        receipt.style.transform = "";
-        receipt.classList.add("is-rest");
-        return;
-      }
-      // каждый заход кладёт лист под своим углом — не идеально ровно,
-      // а на пару градусов в случайную сторону, как брошенная бумага
-      const landRot = Math.random() * 4.4 - 2.2;
-      receipt.style.setProperty("--rest-rot", `${landRot.toFixed(2)}deg`);
-      void receipt.offsetWidth; // сброс состояния перед новым вылетом
-      // На телефоне чек почти во всю ширину экрана: широкий перелёт через
-      // весь экран выглядит грубо — там мягкая посадка сверху с лёгким
-      // заносом справа, без разворота к зрителю.
-      const narrow = window.matchMedia("(max-width: 719px)").matches;
-      const T = narrow ? 900 : 1150;
-      const t0 = performance.now();
-      receipt.style.willChange = "transform, opacity";
-
-      const step = (now: number) => {
-        // кламп с обеих сторон: таймстемп кадра может прийти раньше t0
-        const p = Math.max(0, Math.min(1, (now - t0) / T));
-        // влёт — разгон и мягкое торможение (кубический ease-in-out)
-        const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-        const fall = Math.pow(1 - p, 1.15); // порывы затихают к посадке
-        // десктоп: из-за правого края, ниже цели, дуга вверх на разгоне;
-        // мобилка: сверху вниз на место, лёгкий занос справа
-        const x = narrow ? 16 * (1 - e) : 112 * (1 - e);
-        const y = narrow
-          ? -6.5 * Math.pow(1 - e, 1.1)
-          : 6 * Math.pow(1 - e, 1.1) - 3.4 * Math.sin(Math.PI * p) * Math.pow(1 - p, 0.75);
-        // финальный наклон — случайный угол посадки, а не ровный ноль
-        const rot = narrow
-          ? landRot * e + 4 * Math.pow(1 - e, 1.2)
-          : landRot * e + 7.5 * Math.pow(1 - e, 1.2) + 2.6 * Math.sin(Math.PI * 2.3 * p) * fall;
-        const ry = narrow ? 0 : -7 * (1 - e); // лёгкий разворот к зрителю выпрямляется к посадке
-        const sc = 1 + (narrow ? 0.02 : 0.025) * (1 - e);
-
-        receipt.style.opacity = "1";
-        receipt.style.transform =
-          `perspective(1100px) translate(${x.toFixed(2)}vw, ${y.toFixed(2)}vh) rotate(${rot.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) scale(${sc.toFixed(3)})`;
-
-        if (p < 1) {
-          raf = requestAnimationFrame(step);
-          return;
-        }
-        // лист распластан: ровно, с еле заметным живым покачиванием
-        raf = 0;
-        flying = false;
-        receipt.style.willChange = "";
-        receipt.style.transform = "";
-        receipt.style.opacity = "1";
-        receipt.classList.add("is-rest");
-      };
-      raf = requestAnimationFrame(step);
-    };
-
-    /* Наблюдение за стабильной обёрткой чека: порог 0.4 — чек виден
-       на 40%. Сам чек не наблюдаем: во время полёта его transform
-       уносит бокс за край, и наблюдение сорвалось бы. */
-    const ioStart = performance.now();
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const en of entries) {
-          if (en.intersectionRatio >= 0.4) {
-            // секция уже на экране при загрузке — пауза на entrance;
-            // при скролле прилетает сразу
-            const delay = performance.now() - ioStart < 300 ? 240 : 0;
-            if (delay > 0) {
-              stop();
-              timer = window.setTimeout(flyIn, delay);
-            } else flyIn();
-          } else if (!en.isIntersecting) {
-            // чек целиком ушёл из вьюпорта — сброс до следующего захода
-            stop();
-            flying = false;
-            receipt.classList.remove("is-rest");
-            receipt.style.willChange = "";
-            receipt.style.opacity = "";
-            receipt.style.transform = "";
-          }
-        }
-      },
-      { threshold: [0, 0.4] },
-    );
-    io.observe(holder);
-
-    return () => {
-      stop();
-      io.disconnect();
-    };
-  }, []);
 
   // Навигация-пилюля: стекло после прокрутки, бумага над светлыми секциями
   // (оформление и цена).
@@ -620,89 +474,7 @@ export function Landing() {
           </div>
         </section>
 
-        <section className="section sec--paper sec--price" id="download">
-          <div className="section-inner">
-            <div className="price-grid">
-              <div className="price-copy">
-                <p className="sec-kicker">04 / цена</p>
-                <h2 className="sec-title">
-                  Бесплатно. <span className="alt">Без подвоха.</span>
-                </h2>
-                <p className="price-zero" aria-label="Ноль рублей">
-                  <span>0</span>
-                  <i>₽</i>
-                </p>
-                <p className="section-lead">
-                  Весь плеер целиком: тексты песен, темы, эквалайзер, волна и очередь. Платных планов
-                  нет — качай последнюю сборку и слушай.
-                </p>
-                <div className="price-links">
-                  <a className="sec-link" href={APK_DL}>
-                    <Smartphone size={14} />
-                    Android · APK
-                  </a>
-                  <a className="sec-link" href={SOURCE} target="_blank" rel="noreferrer">
-                    <Github size={14} />
-                    Исходники · GPL-3.0
-                  </a>
-                </div>
-                <p className="price-fine">
-                  Кнопка на чеке качает последний релиз с GitHub Releases. Яндекс Музыка и SoundCloud —
-                  знаки своих владельцев, Lomify их не заменяет.
-                </p>
-              </div>
-              <div className="price-receipt">
-                <div className="receipt">
-                  <div className="receipt-sheet">
-                    <p className="r-brand">LOMIFY·STORE</p>
-                    <p className="r-meta">касса №1 · чек №1337 · без сдачи</p>
-                    <ul className="r-lines">
-                      <li><span>Плеер</span><i /><b>0 ₽</b></li>
-                      <li><span>Тексты песен</span><i /><b>0 ₽</b></li>
-                      <li><span>Темы</span><i /><b>0 ₽</b></li>
-                      <li><span>Эквалайзер</span><i /><b>0 ₽</b></li>
-                      <li><span>Волна и очередь</span><i /><b>0 ₽</b></li>
-                      <li><span>Реклама</span><i /><b className="r-no">нет</b></li>
-                      <li><span>Подписка</span><i /><b className="r-no">не заводилась</b></li>
-                    </ul>
-                    <p className="r-total"><span>ИТОГО</span><i /><b>0 ₽</b></p>
-                    <ReceiptBarcode />
-                    <p className="r-num">4020 0000 0000 000 · СКИДКА 100%</p>
-                    <p className="r-thanks">СПАСИБО, ЧТО СЛУШАЕШЬ</p>
-                    <a className="btn btn-primary r-btn" href={WIN_DL}>
-                      <Download size={16} />
-                      БЕСПЛАТНО
-                    </a>
-                  </div>
-                  <svg className="r-tear" viewBox="0 0 320 12" preserveAspectRatio="none" aria-hidden="true">
-                    <path d={RECEIPT_TEAR} fill="currentColor" />
-                  </svg>
-                </div>
-                {/* Чаевые: чек нулевой, но поблагодарить можно. */}
-                <p className="r-tips-note">чек — 0 ₽, но есть чаевые</p>
-                <a className="r-tips" href={YOOMONEY} target="_blank" rel="noreferrer">
-                  <Heart size={13} />
-                  чаевые
-                </a>
-              </div>
-            </div>
-            <div className="dl-finale">
-              <div className="dl-finale-actions">
-                <a className="btn btn-primary" href={WIN_DL}>
-                  <Download size={16} />
-                  Скачать для Windows
-                </a>
-                <a className="btn btn-ghost" href={APK_DL}>
-                  <Smartphone size={16} />
-                  Android · APK
-                </a>
-              </div>
-              <p className="dl-finale-meta mono">
-                LomifyNEXT · GPL-3.0 · обновления — через GitHub Releases
-              </p>
-            </div>
-          </div>
-        </section>
+        <ReceiptPrinter />
       </main>
 
       <footer className="site-footer">
