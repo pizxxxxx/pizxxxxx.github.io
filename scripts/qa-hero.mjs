@@ -34,6 +34,7 @@ try {
       tagline: q(".side-brand small")?.textContent,
       iconLoaded: q(".side-watermark")?.complete && q(".side-watermark")?.naturalWidth > 0,
       watermarkW: Math.round(q(".side-watermark")?.getBoundingClientRect().width ?? 0),
+      watermarkOffset: q(".side-watermark")?.offsetTop ?? 0,
       watermarkOpacity: Number(getComputedStyle(q(".side-watermark")).opacity),
       versionGone: !q(".side-ver"),
       navCount: side.querySelectorAll(".side-link").length,
@@ -55,6 +56,7 @@ try {
   check("tagline", d.tagline, "Твоя музыка, без лишнего");
   check("iconLoaded", d.iconLoaded, true);
   check("watermarkBig", d.watermarkW >= 200 && d.watermarkOpacity < 0.3, true);
+  check("watermarkRaised", d.watermarkOffset <= -30, true);
   check("versionGone", d.versionGone, true);
   check("navCount", d.navCount, 5);
   check("onCount", d.onCount, 1);

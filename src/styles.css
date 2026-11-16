@@ -677,7 +677,7 @@
    как в самом плеере: краёв не видно, только мягкое свечение точек. */
 .side-watermark {
   position: absolute;
-  top: 0.4rem;
+  top: -2.5rem;
   left: 50%;
   width: 15rem;
   max-width: none;
